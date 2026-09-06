@@ -1,0 +1,49 @@
+services:
+ redpanda:
+   image: docker.redpanda.com/redpandadata/redpanda:latest
+   container_name: redpanda
+   command:
+     - redpanda
+     - start
+     - --smp 1
+     - --memory 1G
+     - --overprovisioned
+     - --node-id 0
+     - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+     - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+   ports:
+     - "19092:19092"
+     - "9644:9644"
+   healthcheck:
+     test: ["CMD", "rpk", "cluster", "health"]
+     interval: 15s
+     timeout: 5s
+     retries: 5
+ 
+ console:
+   image: docker.redpanda.com/redpandadata/console:latest
+   container_name: redpanda-console
+   depends_on: [redpanda]
+   ports:
+     - "8085:8080"
+   environment:
+     KAFKA_BROKERS: redpanda:9092
+ 
+ clickhouse:
+   image: clickhouse/clickhouse-server:latest
+   container_name: clickhouse
+   depends_on: [redpanda]
+   ports:
+     - "8123:8123"
+     - "9000:9000"
+   environment:
+     CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+     CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+     CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+   ulimits:
+     nofile: { soft: 262144, hard: 262144 }
+   volumes:
+     - clickhouse_data:/var/lib/clickhouse
+ 
+volumes:
+ clickhouse_data:
