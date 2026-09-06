@@ -44,6 +44,15 @@ services:
      nofile: { soft: 262144, hard: 262144 }
    volumes:
      - clickhouse_data:/var/lib/clickhouse
- 
+  
+ producer:
+  build: ./producer
+  container_name: producer
+  depends_on: [redpanda]
+  restart: unless-stopped
+  environment:
+    KAFKA_BROKER: redpanda:9092
+
+    
 volumes:
  clickhouse_data:
