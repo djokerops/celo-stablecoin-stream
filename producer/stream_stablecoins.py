@@ -30,10 +30,24 @@ TOKENS = {
     "PHPm":  ("0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B", 18, "PHP"),
     "XOFm":  ("0x73F93dcc49cB8A239e2032663e9475dd5ef29A08", 18, "XOF"),
     "ZARm":  ("0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6", 18, "ZAR"),
+    "BRLA":  ("0xFECB3F7c54E2CAAE9dC6Ac9060A822D47E053760", 18, "BRL"),
+    "VCHF":  ("0xC5ebEa9984C485EC5D58cA5a2D376620d93aF871", 18, "CHF"),
+    "VGBP":  ("0x7aE4265eCFC1F31bc0E112DfCFe3D78E01f4BB7f", 18, "GBP"),
+    "USDGLO": ("0x4F604735c1cF31399C6E711D5962b2B3E0225AD3", 18, "USD"),
+    "USDM":  ("0x59D9356E565Ab3A36dD77763Fc0d87fEaf85508C", 18, "USD"),
+    "cNGN":  ("0xF6829D7393dAe24509eb1E52eE8e572e2E271a4f", 18, "NGN"),
+    "wARS":  ("0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d", 18, "ARS"),
+    "wBRL":  ("0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0", 18, "BRL"),
+    "wMXN":  ("0x337e7456b420bd3481e7fa61fa9850343d610d34", 18, "MXN"),
+    "wCOP":  ("0x8a1d45e102e886510e891d2ec656a708991e2d76", 18, "COP"),
+    "wPEN":  ("0x4F34c8b3b5FB6D98Da888F0feA543d4d9C9F2eBE", 18, "PEN"),
+    "wCLP":  ("0x61D450a098b6a7f69fC4b98CE68198fe59768651", 18, "CLP"),
+
+
 }
 FALLBACK_USD = {"USD": 1.0, "EUR": 1.08, "BRL": 0.196, "AUD": 0.71, "CAD": 0.72,
-                "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064,
-                "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018, "ZAR": 0.062}
+                "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064, "CLP": 0.00108, 
+                "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018, "ZAR": 0.062, "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981}
 
 w3 = Web3(Web3.HTTPProvider(RPC_URL, request_kwargs={"timeout": 30}))
 producer = Producer({"bootstrap.servers": KAFKA_BROKER})

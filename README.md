@@ -1,6 +1,6 @@
 # celo-stablecoin-stream
 
-A live stream of stablecoin payments on Celo. It watches every `Transfer` event for 17 stablecoins as blocks land, converts each amount to USD, and lands it in ClickHouse for querying seconds after it happened on-chain.
+A live stream of stablecoin payments on Celo. It watches every `Transfer` event for 29 stablecoins as blocks land, converts each amount to USD, and lands it in ClickHouse for querying seconds after it happened on-chain.
 
 **[See live Grafana dashboard](https://bluewagon3067.grafana.net/public-dashboards/2e9adb327ca64a73a17c7e8df0aa2d0a)**
 
@@ -14,7 +14,11 @@ Celo (forno RPC) --> producer (Python) --> Redpanda --> ClickHouse --> queries
 2. **Redpanda** is the Kafka-compatible buffer, so the chain reader and the database don't have to keep pace with each other.
 3. **ClickHouse** consumes the topic through a Kafka engine table, and a materialized view writes each row into a `MergeTree` table partitioned by day.
 
-Tracked tokens: `USDm`, `EURm`, `BRLm`, `AUDm`, `CADm`, `CHFm`, `COPm`, `GBPm`, `GHSm`, `JPYm`, `KESm`, `NGNm`, `PHPm`, `XOFm`, `ZARm` (Mento), plus  `USDC` and `USDT`.
+Tracked tokens (29):
+
+- **Mento** — `USDm`, `EURm`, `BRLm`, `AUDm`, `CADm`, `CHFm`, `COPm`, `GBPm`, `GHSm`, `JPYm`, `KESm`, `NGNm`, `PHPm`, `XOFm`, `ZARm`
+- **Ripio** — `wARS`, `wBRL`, `wMXN`, `wCOP`, `wPEN`, `wCLP`
+- **Other issuers** — `USDC`, `USDT`, `BRLA`, `VCHF`, `VGBP`, `USDGLO`, `USDM`, `cNGN`
 
 **USD pricing.** USD-pegged tokens are 1.0. Everything else reads `medianRate` from Mento's `SortedOracles`, but only accepts it within 0.5x–2x of a reference peg — Mento feeds vary in scale and direction, so a raw `num/den` isn't always a clean USD price. Out-of-band reads fall back to the hardcoded reference rate. Treat `amount_usd` as indicative, not settlement-grade.
 
