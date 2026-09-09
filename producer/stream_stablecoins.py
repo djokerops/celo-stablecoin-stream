@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import requests
 from web3 import Web3
 from confluent_kafka import Producer
 from requests.exceptions import ConnectionError as ReqConnErr
@@ -43,10 +44,41 @@ TOKENS = {
     "wPEN":   ("0x4F34c8b3b5FB6D98Da888F0feA543d4d9C9F2eBE", 18, "PEN"),
     "wCLP":   ("0x61D450a098b6a7f69fC4b98CE68198fe59768651", 18, "CLP"),
 }
-FALLBACK_USD = {"USD": 1.0, "EUR": 1.08, "BRL": 0.196, "AUD": 0.71, "CAD": 0.72,
-                "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064, "CLP": 0.00108,
-                "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018, "ZAR": 0.062,
-                "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981}
+
+# hardcoded backstop — used only if the live FX API lacks a currency
+
+HARDCODED_USD = {"USD": 1.0, "EUR": 1.08, "BRL": 0.196, "AUD": 0.71, "CAD": 0.72,
+                 "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064,
+                 "CLP": 0.00108, "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018,
+                 "ZAR": 0.062, "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981}
+
+# Live FX rates (currency -> USD value of 1 unit), refreshed periodically
+FX_URL = "https://open.er-api.com/v6/latest/USD"
+FX_RATES = {}
+FX_LAST_FETCH = 0.0
+FX_TTL = 86400      # refresh daily (source updates daily)
+
+def refresh_fx():
+    """Fetch USD-based rates once and store 'USD value of 1 unit of currency'."""
+    global FX_RATES, FX_LAST_FETCH
+    try:
+        r = requests.get(FX_URL, timeout=15)
+        data = r.json()
+        if data.get("result") == "success" and data.get("rates"):
+            # API gives USD->CCY (e.g. 1 USD = 1322 NGN). We want CCY->USD = 1/that.
+            FX_RATES = {ccy: (1.0 / rate) for ccy, rate in data["rates"].items() if rate}
+            FX_LAST_FETCH = time.time()
+            print(f"  FX rates refreshed: {len(FX_RATES)} currencies")
+        else:
+            print("  FX refresh returned no usable data; keeping existing rates")
+    except Exception as e:
+        print(f"  FX refresh failed ({e}); keeping existing/hardcoded rates")
+
+def fx_fallback(peg):
+    """Best non-oracle rate: live FX rate if available, else hardcoded backstop."""
+    if time.time() - FX_LAST_FETCH > FX_TTL:
+        refresh_fx()
+    return FX_RATES.get(peg) or HARDCODED_USD.get(peg, 1.0)
 
 # Reverse lookup: checksummed address -> (symbol, decimals, peg), built once.
 ADDR_TO_META = {
@@ -75,7 +107,8 @@ def usd_rate(symbol, address, peg):
     if peg == "USD":
         return 1.0
 
-    fallback = FALLBACK_USD.get(peg, 1.0)
+    # Tier 2/3 reference: live FX rate, else hardcoded backstop.
+    fallback = fx_fallback(peg)
     try:
         num, den = oracle.functions.medianRate(
             Web3.to_checksum_address(address)
@@ -87,15 +120,15 @@ def usd_rate(symbol, address, peg):
 
         # Sanity bound: Mento feeds vary in scale/direction, so a raw
         # num/den is not always a clean USD price. Accept the oracle only
-        # if it's within a sane band of our approximate peg; anything
-        # wildly off (e.g. COPm reading ~233 vs ~0.00032) is a misread,
-        # not real FX drift, so fall back to the reference peg.
+        # if it's within a sane band of the (now live) reference rate;
+        # anything wildly off (e.g. COPm reading ~233 vs ~0.00032) is a
+        # misread, not real FX drift, so fall back.
         lo, hi = fallback * 0.5, fallback * 2.0
         if lo <= raw_rate <= hi:
             return raw_rate
 
         print(f"  {symbol}: oracle rate {raw_rate:.6g} outside "
-              f"[{lo:.6g}, {hi:.6g}]; using fallback {fallback}")
+              f"[{lo:.6g}, {hi:.6g}]; using fallback {fallback:.6g}")
         return fallback
 
     except Exception as e:
@@ -155,6 +188,8 @@ def process_block(bn, block_ts):
         print(f"  block {bn:,} {sym}: {n} transfers @ {rate_cache[sym]:.4f} USD")
 
 def run():
+    refresh_fx()      # load FX rates before streaming starts
+
     backoff = 10
     while True:
         try:
