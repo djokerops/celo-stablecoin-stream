@@ -1,0 +1,359 @@
+/* Celo Flow — live stablecoin payments board.
+
+   Theming: dark is the base; light applies on OS preference; the header toggle
+   overrides both by stamping data-theme on <html>. script.js reads every chart
+   colour back off these custom properties, so there is no second copy in JS.
+
+   --palette: 29 slots, same hues and same slot order in both themes (a symbol
+   keeps its identity when the theme flips) — only the steps differ. Generated,
+   not hand-picked: an even OKLCH hue wheel ordered to maximise the worst
+   ADJACENT pair under CVD simulation, each set validated on its own surface:
+     dark  #121214 → adjacent CVD ΔE 14.4 · normal ΔE 20.7 · all ≥3:1
+     light #fdfdfc → adjacent CVD ΔE 15.5 · normal ΔE 19.1 · all ≥3:1
+   Adjacent, not all-pairs: 29 categories can't separate every pair (ceiling
+   ≈ΔE 5 vs a floor of 15). Stacks only butt neighbours together and the stack
+   order is pinned to slot order, so on-screen adjacencies are exactly the
+   validated pairlist; legend, hover-isolate, tooltip and table view carry
+   identity for everything else. */
+
+/* Brand colours sampled from celo.org, not guessed:
+   yellow #fdff52 · purple #b591ff · cream #fcf6f2 · deep purple ink #1e002b.
+
+   They land in OPPOSITE roles because of one measurement: Celo yellow is
+   1.00:1 against Celo cream — identical luminance, invisible as text or as a
+   chart line — but 17.98:1 as a FILL under the dark purple ink, which is
+   exactly how celo.org uses it. Purple mirrors that: 7.11:1 on the dark
+   surface (great as ink) but 2.32:1 on cream (unusable there).
+   So: yellow is a light-mode FILL, purple is a dark-mode INK. */
+
+:root {
+  color-scheme: dark;
+
+  /* lifted off black with a purple cast — still an instrument panel */
+  --plane:      #14101c;
+  --plane-lift: radial-gradient(120% 60% at 50% -10%, #221b30 0%, #14101c 62%);
+  --surface:    #1b1626;
+  --surface-hi: #241e31;
+  --hairline:   rgba(232, 224, 255, .085);
+  --grid:       #282133;
+  --axis:       #392f47;
+  --toggle-on:  #2f2740;
+
+  --ink:   #f2f0f6;        /* 15.61:1 on --surface */
+  --ink-2: #a49eb0;        /*  6.81:1 */
+  --ink-3: #7b7389;
+
+  --accent:     #b591ff;   /* Celo purple — 7.11:1 on --surface */
+  --accent-dim: rgba(181, 145, 255, .15);
+  --accent-ink: #1e002b;   /* ink to sit ON the accent when it's a fill */
+  --series-total: #b591ff; /* unique senders — single series */
+  --series-count: #7db8ff; /* total payment count — single series, 8.55:1 */
+
+  --err-bg:     rgba(230, 90, 90, .12);
+  --err-border: rgba(230, 90, 90, .34);
+  --err-ink:    #f09b9b;
+  --zero:       #3a3248;
+  --tt-bg:      #241e31;
+  --on-accent-dim: #b591ff; /* ink that sits on the --accent-dim wash */
+  --hero-ink:  #b591ff;    /* the one hero figure */
+  --tile-bg:   #1b1626;    /* = surface; the yellow wash is a light-mode move */
+  --focus:     #b591ff;
+
+  --palette: "#bb4841,#7382e6,#8d941a,#a74b93,#847400,#00a0bb,#9e6600,#00a59b,#c5771a,#b869be,#178944,#1e96d3,#b6456d,#ad8600,#0093a3,#af5712,#3690e3,#d76070,#416fca,#1ba475,#9055b1,#5aa140,#0081ad,#d66741,#7061c5,#008b6f,#9a74d9,#608013,#cd619a";
+  --unknown: #5c5c60;
+
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r: 10px;
+}
+
+/* Light theme. Declared twice on purpose — once for the OS preference, once
+   for the explicit toggle — because a media query and an attribute selector
+   can't be merged into one rule. Keep the two blocks in sync. */
+@media (prefers-color-scheme: light) {
+  :root:where(:not([data-theme="dark"])) {
+    color-scheme: light;
+    /* Celo cream, warmed. Yellow is a FILL here, never ink (1.00:1 on cream). */
+    --plane:      #f7f1ec;
+    --plane-lift: radial-gradient(120% 60% at 50% -10%, #fffdfb 0%, #f7f1ec 62%);
+    --surface:    #fcf6f2;
+    --surface-hi: #f1e9e2;
+    --hairline:   rgba(30, 0, 43, .12);
+    --grid:       #ebe2da;
+    --axis:       #d6cabe;
+    --toggle-on:  #fcf9d2;   /* active chip = the soft yellow wash, dark ink on top */
+
+    --ink:   #1e002b;        /* Celo deep purple — 17.98:1 on --surface */
+    --ink-2: #55504f;        /*  7.41:1 */
+    --ink-3: #6f6862;        /*  5.12:1 */
+
+    --accent:     #fdff52;   /* fill only — never ink */
+    --accent-dim: rgba(253, 255, 82, .40);
+    --accent-ink: #1e002b;
+    --on-accent-dim: #1e002b; /* dark ink on the yellow wash */
+    --hero-ink:  #1e002b;    /* 18.00:1 on the yellow-washed hero tile */
+    --tile-bg:   #fcf9d2;    /* cream + Celo yellow — the whole KPI band */
+    --focus:     #5b3fbf;    /* 6.74:1 on cream AND on yellow */
+    --series-total: #8a7a00; /* deep gold — yellow family, 4.03:1 as a line */
+    --series-count: #086bb7; /*  5.16:1 */
+
+    --err-bg:     rgba(183, 28, 28, .07);
+    --err-border: rgba(183, 28, 28, .30);
+    --err-ink:    #a02121;
+    --zero:       #d8cec4;
+    --tt-bg:      #fffdfb;
+    --palette: "#b6322e,#3c41ae,#6a6f07,#871c74,#786907,#0f8fa7,#805304,#119a91,#965806,#7d2385,#0e9247,#0c7db3,#960d4c,#9e7b0c,#1090a0,#813c03,#086bb7,#9a0b35,#2f62c9,#0e9066,#8944ae,#256203,#097399,#8e2d02,#6752c3,#0b8168,#794bbb,#6b8f0c,#ab3378";
+    --unknown: #8a8a83;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Celo cream, warmed. Yellow is a FILL here, never ink (1.00:1 on cream). */
+  --plane:      #f7f1ec;
+  --plane-lift: radial-gradient(120% 60% at 50% -10%, #fffdfb 0%, #f7f1ec 62%);
+  --surface:    #fcf6f2;
+  --surface-hi: #f1e9e2;
+  --hairline:   rgba(30, 0, 43, .12);
+  --grid:       #ebe2da;
+  --axis:       #d6cabe;
+  --toggle-on:  #fcf9d2;   /* active chip = the soft yellow wash, dark ink on top */
+
+  --ink:   #1e002b;        /* Celo deep purple — 17.98:1 on --surface */
+  --ink-2: #55504f;        /*  7.41:1 */
+  --ink-3: #6f6862;        /*  5.12:1 */
+
+  --accent:     #fdff52;   /* fill only — never ink */
+  --accent-dim: rgba(253, 255, 82, .40);
+  --accent-ink: #1e002b;
+  --on-accent-dim: #1e002b; /* dark ink on the yellow wash */
+  --hero-ink:  #1e002b;    /* 18.00:1 on the yellow-washed hero tile */
+  --tile-bg:   #fcf9d2;    /* cream + Celo yellow — the whole KPI band */
+  --focus:     #5b3fbf;    /* 6.74:1 on cream AND on yellow */
+  --series-total: #8a7a00; /* deep gold — yellow family, 4.03:1 as a line */
+  --series-count: #086bb7; /*  5.16:1 */
+
+  --err-bg:     rgba(183, 28, 28, .07);
+  --err-border: rgba(183, 28, 28, .30);
+  --err-ink:    #a02121;
+  --zero:       #d8cec4;
+  --tt-bg:      #fffdfb;
+  --palette: "#b6322e,#3c41ae,#6a6f07,#871c74,#786907,#0f8fa7,#805304,#119a91,#965806,#7d2385,#0e9247,#0c7db3,#960d4c,#9e7b0c,#1090a0,#813c03,#086bb7,#9a0b35,#2f62c9,#0e9066,#8944ae,#256203,#097399,#8e2d02,#6752c3,#0b8168,#794bbb,#6b8f0c,#ab3378";
+  --unknown: #8a8a83;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--plane);
+  background-image: var(--plane-lift);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  transition: background-color .2s ease, color .2s ease;
+}
+.wrap { max-width: 1440px; margin: 0 auto; padding: 28px 24px 64px; }
+
+/* ── micro-label: the recurring wide-tracked all-caps key ────────────────── */
+.micro {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ── header ──────────────────────────────────────────────────────────────── */
+header {
+  display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  padding-bottom: 20px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+h1 { font-size: 21px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+h1 .dim { color: var(--ink-3); font-weight: 400; }
+.live {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--on-accent-dim);
+  padding: 3px 9px 3px 7px; border-radius: 999px;
+  background: var(--accent-dim);
+}
+.pulse {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--on-accent-dim);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+.stamp { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+/* theme switch sits top-right; the update stamp lives bottom-right in .foot */
+header .toggle { margin-left: auto; align-self: center; }
+
+/* ── KPI tiles ───────────────────────────────────────────────────────────── */
+.topline {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--hairline);
+  border: 1px solid var(--hairline); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 24px;
+  transition: opacity .18s ease;
+}
+.topline.loading { opacity: .5; }
+.tile { background: var(--tile-bg); padding: 18px 20px 20px; }
+.tile .label { margin-bottom: 10px; }
+/* All four metrics share one size. clamp() keeps the longest value ("164,763")
+   inside its column at every width — a fixed 52px overflows the 1fr tracks
+   around the 1000-1100px range, where four columns are still in play.
+   Proportional figures: tabular-nums makes large standalone numbers look loose. */
+.tile .value {
+  font-size: clamp(30px, 3.4vw, 52px);
+  font-weight: 600; letter-spacing: -.03em; line-height: 1.1;
+}
+.tile.hero .value { color: var(--hero-ink); }
+
+/* ── panels ──────────────────────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.panel {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r); padding: 16px 18px 14px;
+  display: flex; flex-direction: column;
+  transition: opacity .18s ease;
+}
+.panel.full { grid-column: 1 / -1; }
+/* refetch holds the previous render at reduced opacity — never a skeleton flash */
+.panel.loading { opacity: .5; }
+.phead {
+  display: flex; align-items: center; gap: 4px 12px; margin-bottom: 2px;
+  flex-wrap: wrap;              /* title drops to its own line before it overflows */
+}
+.phead h2 {
+  font-size: 13.5px; font-weight: 600; letter-spacing: -.005em; margin: 0;
+  color: var(--ink); min-width: 0;   /* flex items don't shrink below content without this */
+}
+.phead .note { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+/* ── segmented toggles (chart/table, 1H/24H, theme) ──────────────────────── */
+.toggle {
+  margin-left: auto; display: flex; gap: 1px;
+  background: var(--hairline); border-radius: 5px; overflow: hidden;
+}
+.toggle button {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  background: var(--surface-hi); color: var(--ink-3); border: 0;
+  padding: 4px 8px; cursor: pointer; transition: color .15s, background .15s;
+}
+.toggle button:hover { color: var(--ink-2); }
+.toggle button[aria-pressed="true"] { background: var(--toggle-on); color: var(--ink); }
+.toggle button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.toggle + .toggle { margin-left: 6px; }
+
+/* icon-only buttons (theme switch). The label lives in aria-label + title,
+   never in the glyph alone. Stroke inherits currentColor so the active/idle
+   ink transition applies to the icon too. */
+.toggle button.icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 9px;
+}
+.toggle button.icon svg {
+  width: 14px; height: 14px; display: block;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* section header — carries the range selector for the KPI row */
+.sechead {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.sechead .toggle { margin-left: auto; }
+
+.chart { width: 100%; height: 268px; }
+.panel.tall .chart { height: 300px; }
+
+/* ── custom legend: swatch + symbol, click toggles, hover isolates ───────── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 3px 2px;
+  margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--hairline);
+}
+.legend button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; cursor: pointer; border-radius: 5px;
+  padding: 4px 7px; font-family: var(--mono); font-size: 11px;
+  color: var(--ink-2); transition: background .15s, color .15s, opacity .15s;
+}
+.legend button:hover { background: var(--surface-hi); color: var(--ink); }
+.legend button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.legend button[aria-pressed="false"] { opacity: .34; }
+.legend .sw { width: 9px; height: 9px; border-radius: 2.5px; flex: none; }
+
+/* ── table view (the accessible twin — every value readable without hover) ─ */
+.tableview {
+  display: none; max-height: 300px; overflow: auto; margin-top: 4px;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+}
+.panel.as-table .tableview { display: block; }
+.panel.as-table .chart, .panel.as-table .legend { display: none; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td {
+  text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--hairline);
+  font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+th {
+  color: var(--ink-3); font-weight: 500; font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; position: sticky; top: 0; background: var(--surface);
+}
+th:first-child, td:first-child { text-align: left; }
+td { color: var(--ink-2); }
+td.zero { color: var(--zero); }
+td.empty { text-align: center; color: var(--ink-3); padding: 22px; }
+tbody tr:hover td { background: var(--surface-hi); color: var(--ink); }
+
+#receivers td.addr { font-size: 11.5px; color: var(--ink-3); }
+#receivers td.v { color: var(--ink); }
+
+.foot {
+  margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--hairline);
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
+}
+.foot .stamp { margin-left: auto; font-size: 11px; }
+.err {
+  display: none; margin-bottom: 16px; padding: 11px 14px; border-radius: 8px;
+  background: var(--err-bg); border: 1px solid var(--err-border);
+  color: var(--err-ink); font-family: var(--mono); font-size: 12px;
+}
+.err.on { display: block; }
+
+/* ── responsive ladder ───────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: 1fr; }
+  .topline { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 22px 16px 52px; }
+  .topline { grid-template-columns: 1fr; }
+  .tile { padding: 15px 16px 17px; }
+  .chart, .panel.tall .chart { height: 248px; }
+  h1 { font-size: 19px; }
+}
+@media (max-width: 480px) {
+  .wrap { padding: 18px 12px 44px; }
+  .panel { padding: 14px 13px 12px; }
+  .chart, .panel.tall .chart { height: 216px; }
+  h1 { font-size: 17px; }
+  h1 .dim { display: block; }           /* title breaks onto two lines cleanly */
+  .phead h2 { font-size: 12.5px; }
+  .phead .note { display: none; }       /* the range toggle already states it */
+  .foot { gap: 6px; flex-direction: column; }
+}
+
+/* Touch devices: the 9.5px chips are fine under a mouse but are far below the
+   44px minimum under a finger. Bump where the pointer is actually coarse (any
+   phone or tablet) OR where the viewport is phone-narrow — the second arm keeps
+   the desktop density everywhere else while making the rule verifiable. */
+@media (pointer: coarse), (max-width: 480px) {
+  .toggle button { padding: 11px 15px; font-size: 11px; min-height: 44px; }
+  .legend button { padding: 10px 12px; font-size: 12px; min-height: 44px; }
+  .legend .sw { width: 11px; height: 11px; }
+  th, td { padding: 11px 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Celo Flow — Live Stablecoin Payments</title>
+
+<!-- Applied before first paint so the page never flashes the wrong theme.
+     This is the one script that must stay inline and blocking. -->
+<script>
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch (e) { /* private mode — fall back to the OS preference */ }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="script.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Celo Flow <span class="dim">/ live stablecoin payments</span></h1>
+  <span class="live"><span class="pulse"></span>Streaming</span>
+  <div class="toggle" id="theme-toggle" role="group" aria-label="Colour theme">
+    <button type="button" class="icon" data-theme="dark" aria-pressed="true" aria-label="Dark theme" title="Dark theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    </button>
+    <button type="button" class="icon" data-theme="light" aria-pressed="false" aria-label="Light theme" title="Light theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="err" id="err"></div>
+
+<div class="sechead">
+  <span class="micro">Overview</span>
+  <div class="toggle range" data-target="top" role="group" aria-label="Overview time range">
+    <button type="button" data-hours="1"  aria-pressed="false">1H</button>
+    <button type="button" data-hours="24" aria-pressed="true">24H</button>
+  </div>
+</div>
+
+<section class="topline" id="p-top">
+  <div class="tile hero">
+    <div class="label micro">Payment volume <span class="rng">· 24h</span></div>
+    <div class="value" id="s-volume">—</div>
+  </div>
+  <div class="tile">
+    <div class="label micro">Unique senders <span class="rng">· 24h</span></div>
+    <div class="value" id="s-senders">—</div>
+  </div>
+  <div class="tile">
+    <div class="label micro">Transfers <span class="rng">· 24h</span></div>
+    <div class="value" id="s-transfers">—</div>
+  </div>
+  <div class="tile">
+    <div class="label micro">Active stablecoins <span class="rng">· 24h</span></div>
+    <div class="value" id="s-coins">—</div>
+  </div>
+</section>
+
+<section class="grid">
+
+  <!-- ══ the four time-series panels ══ -->
+  <div class="panel tall" id="p-senders">
+    <div class="phead">
+      <h2>Unique Senders Per Minute</h2>
+      <!--span class="note">60m</span-->
+      <div class="toggle view" role="group" aria-label="View as">
+        <button type="button" data-view="chart" aria-pressed="true">Chart</button>
+        <button type="button" data-view="table" aria-pressed="false">Table</button>
+      </div>
+    </div>
+    <div class="chart" id="c-senders" role="img"
+         aria-label="Unique sending addresses per minute over the last hour, across all stablecoins combined."></div>
+    <div class="tableview" id="t-senders"></div>
+  </div>
+
+  <div class="panel tall" id="p-payments">
+    <div class="phead">
+      <h2>Payment Count Per Minute</h2>
+      <!--span class="note">60m · all symbols</span-->
+      <div class="toggle view" role="group" aria-label="View as">
+        <button type="button" data-view="chart" aria-pressed="true">Chart</button>
+        <button type="button" data-view="table" aria-pressed="false">Table</button>
+      </div>
+    </div>
+    <div class="chart" id="c-payments" role="img"
+         aria-label="Total distinct payment transactions per minute over the last hour."></div>
+    <div class="tableview" id="t-payments"></div>
+  </div>
+
+  <div class="panel full tall" id="p-paysym">
+    <div class="phead">
+      <h2>Payment Count Per Minute Per Stablecoin</h2>
+      <!--span class="note">60m · stacked</span-->
+      <div class="toggle view" role="group" aria-label="View as">
+        <button type="button" data-view="chart" aria-pressed="true">Chart</button>
+        <button type="button" data-view="table" aria-pressed="false">Table</button>
+      </div>
+    </div>
+    <div class="chart" id="c-paysym" role="img"
+         aria-label="Distinct payment transactions per minute, stacked by stablecoin, over the last hour."></div>
+    <div class="legend" id="l-paysym"></div>
+    <div class="tableview" id="t-paysym"></div>
+  </div>
+
+  <div class="panel full tall" id="p-volsym">
+    <div class="phead">
+      <h2>Payment Volume in USD Per Minute Per Stablecoin</h2>
+      <!--span class="note">60m · stacked</span-->
+      <div class="toggle view" role="group" aria-label="View as">
+        <button type="button" data-view="chart" aria-pressed="true">Chart</button>
+        <button type="button" data-view="table" aria-pressed="false">Table</button>
+      </div>
+    </div>
+    <div class="chart" id="c-volsym" role="img"
+         aria-label="USD payment volume per minute, stacked by stablecoin, over the last hour."></div>
+    <div class="legend" id="l-volsym"></div>
+    <div class="tableview" id="t-volsym"></div>
+  </div>
+
+  <!-- ══ 1h / 24h breakdowns ══ -->
+  <div class="panel" id="p-symbol">
+    <div class="phead">
+      <h2>Payment Volume by Stablecoin</h2>
+      <div class="toggle range" data-target="symbol" role="group" aria-label="Time range">
+        <button type="button" data-hours="1"  aria-pressed="false">1H</button>
+        <button type="button" data-hours="24" aria-pressed="true">24H</button>
+      </div>
+    </div>
+    <div class="chart" id="c-symbol" role="img"
+         aria-label="USD payment volume by stablecoin, ranked."></div>
+  </div>
+
+  <div class="panel" id="p-peg">
+    <div class="phead">
+      <h2>Payment Volume by Peg Currency</h2>
+      <div class="toggle range" data-target="peg" role="group" aria-label="Time range">
+        <button type="button" data-hours="1"  aria-pressed="false">1H</button>
+        <button type="button" data-hours="24" aria-pressed="true">24H</button>
+      </div>
+    </div>
+    <div class="chart" id="c-peg" role="img"
+         aria-label="Share of USD payment volume by peg currency."></div>
+  </div>
+
+  <div class="panel full" id="p-recv">
+    <div class="phead">
+      <h2>Top Payment Receivers</h2>
+      <div class="toggle range" data-target="recv" role="group" aria-label="Time range">
+        <button type="button" data-hours="1"  aria-pressed="false">1H</button>
+        <button type="button" data-hours="24" aria-pressed="true">24H</button>
+      </div>
+    </div>
+    <div class="tableview" style="display:block; max-height:none;">
+      <table id="receivers">
+        <thead><tr><th>Receiver</th><th>Received</th><th>Transfers</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<div class="foot">
+  <span>© 2026 Celo Core Co.</span>
+  <span>Refresh 30s</span>
+  <span class="stamp" id="stamp">—</span>
+</div>
+
+</div>
+</body>
+</html>

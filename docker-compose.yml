@@ -44,15 +44,28 @@ services:
      nofile: { soft: 262144, hard: 262144 }
    volumes:
      - clickhouse_data:/var/lib/clickhouse
-  
- producer:
-  build: ./producer
-  container_name: producer
-  depends_on: [redpanda]
-  restart: unless-stopped
-  environment:
-    KAFKA_BROKER: redpanda:9092
 
-    
+ producer:
+   build: ./producer
+   container_name: producer
+   depends_on: [redpanda]
+   restart: unless-stopped
+   environment:
+     KAFKA_BROKER: redpanda:9092
+
+ api:
+   build: ./api
+   container_name: api
+   depends_on: [clickhouse]
+   restart: unless-stopped
+   ports:
+     - "8000:8000"
+   environment:
+     CLICKHOUSE_HOST: clickhouse
+     CLICKHOUSE_PORT: 8123
+     CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+     CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+     CLICKHOUSE_DATABASE: default
+
 volumes:
  clickhouse_data:
