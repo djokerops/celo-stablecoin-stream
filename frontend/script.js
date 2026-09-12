@@ -1,7 +1,7 @@
 "use strict";
 
 /* ═══ config ═══════════════════════════════════════════════════════════════ */
-const API_BASE =  "http://localhost:8000";
+const API_BASE =  "https://api.celoflow.stream";
 const MINUTES  = 60;
 const REFRESH  = 30000;
 
