@@ -554,22 +554,33 @@ window.addEventListener("resize", () => {
 });
 
 /* ═══ refresh loop ═════════════════════════════════════════════════════════ */
-const errBox = document.getElementById("err");
 
 async function refreshAll() {
   const jobs = [loadSummary, loadSenders, loadPayments, loadPaySym,
                 loadVolSym, loadBySymbol, loadByPeg, loadReceivers];
   const results = await Promise.allSettled(jobs.map(fn => fn()));
   const failed = results.filter(r => r.status === "rejected");
+
+  /* Failures stay in the console, not on the page. A fetch that misses is
+     self-correcting — the next tick is 30s out and the panels keep showing the
+     last good data — so a red banner in front of every visitor overstates a
+     blip the board already recovers from on its own. The #err element and its
+     styles are still in place if this ever needs turning back on. */
   if (failed.length) {
-    errBox.classList.add("on");
-    errBox.textContent = `${failed.length} of ${jobs.length} panels failed to load — ${failed[0].reason.message}. Retrying in 30s.`;
-    console.error("refresh failures:", failed.map(f => f.reason));
-  } else {
-    errBox.classList.remove("on");
+    console.error(`refresh: ${failed.length}/${jobs.length} panels failed`,
+                  failed.map(f => f.reason));
   }
-  document.getElementById("stamp").textContent =
-    "Updated " + new Date().toLocaleTimeString(undefined, { hour12: false });
+
+  /* The stamp is the only remaining freshness signal, so it has to mean what it
+     says: it advances only when this tick actually brought something back. A
+     total outage therefore freezes it, and the gap between it and the wall
+     clock is the tell — quieter than a banner and it can't cry wolf.
+     At-least-one, not all-eight, on purpose: a single flaky panel would
+     otherwise strand the stamp while the board is plainly still live. */
+  if (failed.length < jobs.length) {
+    document.getElementById("stamp").textContent =
+      "Updated " + new Date().toLocaleTimeString(undefined, { hour12: false });
+  }
 }
 
 refreshAll();
