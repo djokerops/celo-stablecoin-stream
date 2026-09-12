@@ -2,7 +2,7 @@
 
 A live stream of stablecoin payments on Celo. It watches every `Transfer` event for 29 stablecoins as blocks land, converts each amount to USD, and lands it in ClickHouse for querying seconds after it happened on-chain.
 
-**[See live Grafana dashboard](https://bluewagon3067.grafana.net/public-dashboards/2e9adb327ca64a73a17c7e8df0aa2d0a)**
+**[See live dashboard](https://celoflow-nine.vercel.app)**
 
 ## What it does
 
