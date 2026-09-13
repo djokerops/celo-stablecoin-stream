@@ -33,7 +33,10 @@
        of the <h1> is what makes that possible — it used to be an inline span, so
        it could only ever wrap, never sit on a line of its own. -->
   <div class="titlebar">
-    <h1>Celo Flow</h1>
+    <!-- "Celo" stays real text: it carries the heading's accessible name and
+         it is what shows if mask-image is unsupported. The CSS swaps it for the
+         wordmark, which is masked so it takes the title's own colour. -->
+    <h1><span class="wordmark">Celo</span> Flow</h1>
     <span class="live"><span class="pulse"></span>Streaming</span>
     <div class="toggle" id="theme-toggle" role="group" aria-label="Colour theme">
       <button type="button" class="icon" data-theme="dark" aria-pressed="true" aria-label="Dark theme" title="Dark theme">

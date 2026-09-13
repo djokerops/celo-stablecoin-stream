@@ -164,11 +164,20 @@ body {
 
 /* ── header ──────────────────────────────────────────────────────────────── */
 header {
-  /* One token drives both title lines so they stay the same size as the
-     breakpoints step it down — scoped here, not on :root, because nothing
-     outside the header uses it. */
-  --title: 21px;
-  display: flex; flex-direction: column; gap: 3px;
+  /* Two tokens, one per title line, scoped here because nothing outside the
+     header uses them. They are equal at every width EXCEPT desktop, where the
+     lockup is deliberately larger: at 21px its glyphs stood 15.1px tall against
+     a 22.5px STREAMING pill, so the name read as the smaller of the two. 34px
+     puts the glyphs at ~24.4px — just clear of the pill. The descriptor stays
+     at 21px, which is what turns a single block of type into a hierarchy.
+     The two media queries below return both to a single size on smaller
+     screens, so this change is desktop-only. */
+  --title: 34px;
+  --tagline: 21px;
+  /* No flex gap: the two lines are spaced by their own line-height below.
+     Body copy's 1.5 leaves ~13px of dead space under a 34px title — which is
+     what made the block look loosely padded rather than like one lockup. */
+  display: flex; flex-direction: column; gap: 0;
   padding-bottom: 20px; margin-bottom: 24px;
   border-bottom: 1px solid var(--hairline);
 }
@@ -181,12 +190,36 @@ header {
 .titlebar h1, .titlebar .live { white-space: nowrap; }
 .titlebar .live, .titlebar .toggle { flex-shrink: 0; }
 
-h1 { font-size: var(--title); font-weight: 600; letter-spacing: -.015em; margin: 0; }
+h1 { font-size: var(--title); font-weight: 600; letter-spacing: -.015em;
+     line-height: 1.1; margin: 0; }
+
+/* The CELO wordmark replaces the word "Celo" in the title.
+   Masked rather than drawn: name.png carries only an alpha channel, so the fill
+   is currentColor and the mark is always exactly the colour of "Flow" beside it
+   — cream on the dark plane, near-black on the cream one — from one asset. The
+   letter counters are holes, so the page shows through them.
+   Sized in em off --title, so it tracks the 34/19/17px breakpoints by itself.
+   Wrapped in @supports because without mask-image the span would otherwise be a
+   solid currentColor block; unsupported browsers keep the plain "Celo Flow". */
+@supports ((-webkit-mask-image: url("")) or (mask-image: url(""))) {
+  .wordmark {
+    display: inline-block;
+    height: .72em;                 /* cap height of the adjacent "Flow" */
+    width: 3.19em;                 /* .72 x 4.4309, the asset's trimmed aspect */
+    margin-right: .10em;           /* + the word space = gap ~= half the cap
+                                      height, the ratio the Celo lockup uses */
+    text-indent: 200%; white-space: nowrap; overflow: hidden;
+    background-color: currentColor;
+    -webkit-mask: url("name.png") no-repeat left center / contain;
+            mask: url("name.png") no-repeat left center / contain;
+  }
+}
 
 /* Reads as the second line of the title, not a second heading: same size and
    tracking as the name, one step down in ink. */
 .tagline {
-  margin: 0; font-size: var(--title); font-weight: 400;
+  margin: 0; font-size: var(--tagline); font-weight: 400;
+  line-height: 1.1;                /* display leading, not body leading */
   letter-spacing: -.015em; color: var(--ink-3);
 }
 .live {
@@ -389,13 +422,17 @@ tbody tr:hover td { background: var(--surface-hi); color: var(--ink); }
   .topline { grid-template-columns: 1fr; }
   .tile { padding: 15px 16px 17px; }
   .chart, .panel.tall .chart { height: 248px; }
-  header { --title: 19px; }
+  /* The descriptor stops tracking the name here. Matching it 1:1 gave the two
+     lines equal weight on a phone, where the name has far less room to assert
+     itself; 14px keeps the same demotion desktop gets, without dropping into
+     the 10-12px band this design reserves for labels and metadata. */
+  header { --title: 19px; --tagline: 14px; }
 }
 @media (max-width: 480px) {
   .wrap { padding: 18px 12px 44px; }
   .panel { padding: 14px 13px 12px; }
   .chart, .panel.tall .chart { height: 216px; }
-  header { --title: 17px; }
+  header { --title: 17px; --tagline: 13px; }
   .phead h2 { font-size: 12.5px; }
   .phead .note { display: none; }       /* the range toggle already states it */
   /* one centred column — the side zones have no room to sit beside the
