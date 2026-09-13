@@ -129,7 +129,16 @@ function fmtUsd(n) {
   return "$" + n.toFixed(a < 10 ? 2 : 0);
 }
 const fmtUsdFull = (n) => "$" + nf.format(Math.round(Number(n) || 0));
-const hhmm = (iso) => iso.slice(11, 16);
+/* The API sends a naive UTC stamp ("2026-09-13T17:48:00" — no Z, no offset).
+   These digits are read straight out of the string rather than through
+   new Date(), deliberately: a Date parse would read a naive string as the
+   VIEWER's local time, and the axis would then say something different in
+   Lagos than in New York for the same bar. Everyone sees the same UTC wall
+   clock, which is what keeps a shared chart comparable between people. */
+const hhmm = (iso) => {
+  const h = +iso.slice(11, 13);
+  return `${h % 12 || 12}:${iso.slice(14, 16)} ${h < 12 ? "AM" : "PM"}`;
+};
 const shortAddr = (a) => a.slice(0, 10) + "…" + a.slice(-8);
 
 async function getJSON(path) {
@@ -189,20 +198,26 @@ const tooltipBase = (t) => ({
 const swatch = (c) => `<span style="display:inline-block;width:9px;height:9px;border-radius:2.5px;background:${c};margin-right:7px;vertical-align:middle"></span>`;
 const ttHead = (t, s) => `<div style="color:${t.ink3};font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">${s}</div>`;
 
+/* Time headers carry the zone; plain ttHead stays generic. The axis is UTC for
+   every visitor (see hhmm), and that is stated here — in the panel the reader
+   opens deliberately — rather than on the axis, where it would cost horizontal
+   room on all sixty ticks to say the same thing sixty times. */
+const ttTime = (t, label) => ttHead(t, `${label} UTC`);
+
 /* Shared by both stacked forms: series ranked by value at the hovered minute,
    capped, with the column total underneath. */
 function stackedTooltip(t, fmtVal) {
   return (ps) => {
     const live = ps.filter(p => p.value > 0).sort((a, b) => b.value - a.value);
     const total = ps.reduce((acc, p) => acc + (p.value || 0), 0);
-    if (!live.length) return ttHead(t, ps[0].axisValue) + `<span style="color:${t.ink3}">no payments</span>`;
+    if (!live.length) return ttTime(t, ps[0].axisValue) + `<span style="color:${t.ink3}">no payments</span>`;
     const rows = live.slice(0, 14).map(p =>
       `<div style="display:flex;gap:18px;justify-content:space-between;line-height:1.75">
          <span>${swatch(p.color)}<span style="color:${t.ink2}">${p.seriesName}</span></span>
          <span style="color:${t.ink};font-variant-numeric:tabular-nums">${fmtVal(p.value)}</span>
        </div>`).join("");
     const more = live.length > 14 ? `<div style="color:${t.ink3};margin-top:4px">+${live.length - 14} more</div>` : "";
-    return ttHead(t, ps[0].axisValue) + rows + more +
+    return ttTime(t, ps[0].axisValue) + rows + more +
       `<div style="margin-top:8px;padding-top:7px;border-top:1px solid ${t.hairline};
             display:flex;gap:18px;justify-content:space-between">
          <span style="color:${t.ink3}">Total</span>
@@ -302,7 +317,7 @@ function areaLineOption(labels, values, color, fmtAxis, fmtVal, seriesName) {
       axisPointer: { type: "line", lineStyle: { color: t.axis, width: 1 } },
       formatter(ps) {
         const p = ps[0];
-        return ttHead(t, p.axisValue) +
+        return ttTime(t, p.axisValue) +
           `<div style="display:flex;gap:20px;justify-content:space-between">
              <span>${swatch(color)}<span style="color:${t.ink2}">${seriesName}</span></span>
              <span style="color:${t.ink};font-variant-numeric:tabular-nums">${fmtVal(p.value)}</span>
@@ -725,7 +740,8 @@ async function refreshAll() {
   /* The stamp is the only remaining freshness signal */
   if (failed.length < jobs.length) {
     document.getElementById("stamp").textContent =
-      "Updated " + new Date().toLocaleTimeString(undefined, { hour12: false });
+      "Updated " + new Date().toLocaleTimeString(undefined,
+        { hour12: true, timeZone: "UTC" }) + " UTC";
   }
 }
 
