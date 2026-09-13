@@ -25,8 +25,11 @@ def load_labels():
                     if not row or len(row) < 2:
                         continue
                     addr, ltype = row[0].strip(), row[1].strip()
-                    # skip header / blanks
-                    if not addr or addr.lower() == "address":
+                    # skip header / blanks. ltype is checked too: a row like
+                    # "0xabc," would otherwise map the address to "", and an
+                    # empty type flows straight through classify() into the
+                    # tx_type column, where it renders as "Unlabeled".
+                    if not addr or not ltype or addr.lower() == "address":
                         continue
                     labels[addr.lower()] = ltype
                     count += 1

@@ -156,9 +156,22 @@
   </div>
 
   <!-- ══ transaction-type breakdowns ══
-       Same pair of questions as the two panels above — how volume moves over
-       time, and how it splits right now — asked of tx_type instead of the
-       token. Kept side by side so the shape and the share read together. -->
+       Same pair of questions as the two panels above — how volume splits right
+       now, and how it moves over time — asked of tx_type instead of the token.
+       Share on the left, shape on the right, so the eye lands on the mix first
+       and then reads what produced it. -->
+  <div class="panel" id="p-txtype">
+    <div class="phead">
+      <h2>Payment Volume by Transaction Type</h2>
+      <div class="toggle range" data-target="txtype" role="group" aria-label="Time range">
+        <button type="button" data-hours="1"  aria-pressed="false">1H</button>
+        <button type="button" data-hours="24" aria-pressed="true">24H</button>
+      </div>
+    </div>
+    <div class="chart" id="c-txtype" role="img"
+         aria-label="Share of USD payment volume by transaction type."></div>
+  </div>
+
   <div class="panel" id="p-voltype">
     <div class="phead">
       <h2>Payment Volume Per Minute by Transaction Type</h2>
@@ -171,18 +184,6 @@
          aria-label="USD payment volume per minute, stacked by transaction type, over the last hour."></div>
     <div class="legend" id="l-voltype"></div>
     <div class="tableview" id="t-voltype"></div>
-  </div>
-
-  <div class="panel" id="p-txtype">
-    <div class="phead">
-      <h2>Payment Volume by Transaction Type</h2>
-      <div class="toggle range" data-target="txtype" role="group" aria-label="Time range">
-        <button type="button" data-hours="1"  aria-pressed="false">1H</button>
-        <button type="button" data-hours="24" aria-pressed="true">24H</button>
-      </div>
-    </div>
-    <div class="chart" id="c-txtype" role="img"
-         aria-label="Share of USD payment volume by transaction type."></div>
   </div>
 
   <div class="panel full" id="p-recv">

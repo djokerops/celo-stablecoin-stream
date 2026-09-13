@@ -69,13 +69,17 @@ const rankOf   = (sym) => SLOT.has(sym) ? SLOT.get(sym) : 999;
    Ordered by expected share, busiest first. The producer classifies by
    counterparty label and falls back to "p2p"; mint and burn are listed because
    classify() can emit them, though both endpoints filter zero/dead addresses
-   out before grouping, so in practice they never arrive. */
+   out before grouping, so in practice they never arrive.
+
+   The two CEX entries are one address list read in both directions: out of a
+   hot wallet is a withdrawal, into one is a sweep or rebalance. Ramps are not
+   split that way — on- and off-ramp both report as "Ramp". */
 const TX_TYPES = [
   ["p2p",            "P2P"],
   ["ramping",        "Ramp"],
   ["dex_swap",       "DEX Swap"],
   ["cex_withdrawal", "CEX Withdrawal"],
-  ["cex_deposit",    "CEX Deposit"],
+  ["cex_rebalance",  "CEX Rebalance"],
   ["lending",        "Lending"],
   ["bridging",       "Bridging"],
   ["mint",           "Mint"],
@@ -89,8 +93,28 @@ const TX_UNLABELED = "Unlabeled";
 const TX_LABEL = new Map(TX_TYPES);
 const TX_SLOT  = new Map(TX_TYPES.map(([, label], i) => [label, i]));
 
+/* Which run of the palette the types draw from. Symbols start at 0; these start
+   at 7, and the offset is measured, not taste.
+
+   The palette guarantees a floor only for ADJACENT slots, but a pie ranks by
+   value, so ANY two types can end up touching — all 36 pairs have to hold up,
+   not just the nine consecutive ones. Scoring every 9-slot window on its worst
+   pair in the worse theme, under CIEDE2000 (CIE76 is unusable here: it rates
+   blues as far apart when they aren't, and picks a window of near-identical
+   blues):
+
+     slots  0-8   ΔE00  5.8   ← DEX Swap vs CEX Rebalance, both olive
+     slots 14-22  ΔE00  6.6
+     slots  7-15  ΔE00 10.4   ← chosen
+
+   Consecutive on purpose: the stack is pinned to slot order, so its on-screen
+   neighbours stay the pairs the palette validated. Rescore this if TX_TYPES
+   ever grows past nine. */
+const TX_SLOT_OFFSET = 7;
+
 const txLabel = (key) => TX_LABEL.get(key) || (key || TX_UNLABELED);
-const txColor = (label) => TX_SLOT.has(label) ? palette()[TX_SLOT.get(label)] : cssVar("--unknown");
+const txColor = (label) =>
+  TX_SLOT.has(label) ? palette()[TX_SLOT.get(label) + TX_SLOT_OFFSET] : cssVar("--unknown");
 const txRank  = (label) => TX_SLOT.has(label) ? TX_SLOT.get(label) : 999;
 
 /* ═══ formatting ═══════════════════════════════════════════════════════════ */
@@ -187,16 +211,7 @@ function stackedTooltip(t, fmtVal) {
   };
 }
 
-/* ═══ stacked area (USD volume per minute, per transaction type) ════════════
-   A stacked BAR is the idiom for the two full-width per-minute panels, but this
-   one lives in a half-width panel: 60 columns across ~570px leaves each bar
-   thinner than the 1px surface gap meant to separate it, and the composition
-   stops being readable. An area band carries the same stacked total with no
-   per-column geometry to lose, and the category count here is single digits,
-   which is where stacked areas still read honestly.
-
-   smoothMonotone pins the curve to the data — plain smoothing overshoots on a
-   spiky minute and would draw volume that never happened. */
+/* ═══ stacked area (USD volume per minute, per transaction type) */
 function stackedAreaOption(piv, fmtAxis, fmtVal, colorOf) {
   const t = theme();
   const { minutes, names, data } = piv;
@@ -607,8 +622,8 @@ async function loadReceivers() {
 }
 
 const RENDERERS = [renderSummary, renderSenders, renderPayments, renderPaySym,
-                   renderVolSym, renderBySymbol, renderByPeg, renderVolType,
-                   renderByTxType, renderReceivers];
+                   renderVolSym, renderBySymbol, renderByPeg, renderByTxType,
+                   renderVolType, renderReceivers];
 
 /* ═══ theme toggle ═════════════════════════════════════════════════════════ */
 const themeGroup = document.getElementById("theme-toggle");
@@ -692,8 +707,8 @@ window.addEventListener("resize", () => {
 
 async function refreshAll() {
   const jobs = [loadSummary, loadSenders, loadPayments, loadPaySym,
-                loadVolSym, loadBySymbol, loadByPeg, loadVolType,
-                loadByTxType, loadReceivers];
+                loadVolSym, loadBySymbol, loadByPeg, loadByTxType,
+                loadVolType, loadReceivers];
   const results = await Promise.allSettled(jobs.map(fn => fn()));
   const failed = results.filter(r => r.status === "rejected");
 
@@ -707,12 +722,7 @@ async function refreshAll() {
                   failed.map(f => f.reason));
   }
 
-  /* The stamp is the only remaining freshness signal, so it has to mean what it
-     says: it advances only when this tick actually brought something back. A
-     total outage therefore freezes it, and the gap between it and the wall
-     clock is the tell — quieter than a banner and it can't cry wolf.
-     At-least-one, not all-eight, on purpose: a single flaky panel would
-     otherwise strand the stamp while the board is plainly still live. */
+  /* The stamp is the only remaining freshness signal */
   if (failed.length < jobs.length) {
     document.getElementById("stamp").textContent =
       "Updated " + new Date().toLocaleTimeString(undefined, { hour12: false });

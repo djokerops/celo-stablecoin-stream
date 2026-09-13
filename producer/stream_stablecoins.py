@@ -87,16 +87,35 @@ def fx_fallback(peg):
 
 
 # 2. classify a transfer by its counterparties
+#
+# The CSVs name the ENTITY an address is ("cex", "ramping", "dex_swap", ...);
+# this function names the EVENT a transfer is. They differ wherever direction
+# carries meaning, which today is exchanges: the cex list is hot wallets, so
+# paying OUT of one is a user withdrawal, while anything arriving IN is a sweep
+# from deposit addresses or a rebalance — never a user deposit, because users
+# are handed their own deposit address. Both sides labelled is exchange-internal,
+# so it reads as a rebalance too.
+#
+# Ramps stay deliberately undivided: on- and off-ramp both report as "ramping"
+# until we decide to split them.
 def classify(from_addr, to_addr):
     if from_addr in (ZERO_ADDR, DEAD_ADDR):
         return "mint"
     if to_addr in (ZERO_ADDR, DEAD_ADDR):
         return "burn"
-    if to_addr in ADDRESS_LABELS:
-        return ADDRESS_LABELS[to_addr]
-    if from_addr in ADDRESS_LABELS:
-        return ADDRESS_LABELS[from_addr]
-    return "p2p"
+
+    frm_label = ADDRESS_LABELS.get(from_addr)
+    to_label  = ADDRESS_LABELS.get(to_addr)
+
+    if frm_label == "cex" and to_label == "cex":
+        return "cex_rebalance"
+    if frm_label == "cex":
+        return "cex_withdrawal"
+    if to_label == "cex":
+        return "cex_rebalance"
+
+    # everything else keeps the to-before-from precedence it has always had
+    return to_label or frm_label or "p2p"
 
 
 # Reverse lookup: checksummed address -> (symbol, decimals, peg), built once.
