@@ -5,6 +5,7 @@ import requests
 from web3 import Web3
 from confluent_kafka import Producer
 from requests.exceptions import ConnectionError as ReqConnErr
+from labels import ADDRESS_LABELS   
 
 RPC_URL      = "https://forno.celo.org"
 KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "localhost:19092")
@@ -52,6 +53,10 @@ HARDCODED_USD = {"USD": 1.0, "EUR": 1.08, "BRL": 0.196, "AUD": 0.71, "CAD": 0.72
                  "CLP": 0.00108, "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018,
                  "ZAR": 0.062, "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981}
 
+# Zero/burn addresses for mint/burn classification
+ZERO_ADDR = "0x0000000000000000000000000000000000000000"
+DEAD_ADDR = "0x000000000000000000000000000000000000dead"
+
 # Live FX rates (currency -> USD value of 1 unit), refreshed periodically
 FX_URL = "https://open.er-api.com/v6/latest/USD"
 FX_RATES = {}
@@ -79,6 +84,20 @@ def fx_fallback(peg):
     if time.time() - FX_LAST_FETCH > FX_TTL:
         refresh_fx()
     return FX_RATES.get(peg) or HARDCODED_USD.get(peg, 1.0)
+
+
+# 2. classify a transfer by its counterparties
+def classify(from_addr, to_addr):
+    if from_addr in (ZERO_ADDR, DEAD_ADDR):
+        return "mint"
+    if to_addr in (ZERO_ADDR, DEAD_ADDR):
+        return "burn"
+    if to_addr in ADDRESS_LABELS:
+        return ADDRESS_LABELS[to_addr]
+    if from_addr in ADDRESS_LABELS:
+        return ADDRESS_LABELS[from_addr]
+    return "p2p"
+
 
 # Reverse lookup: checksummed address -> (symbol, decimals, peg), built once.
 ADDR_TO_META = {
@@ -162,17 +181,20 @@ def process_block(bn, block_ts):
             rate_cache[symbol] = usd_rate(symbol, token_addr, peg)
         rate = rate_cache[symbol]
 
-        frm = "0x" + lg["topics"][1].hex()[-40:]
-        to  = "0x" + lg["topics"][2].hex()[-40:]
+        frm = ("0x" + lg["topics"][1].hex()[-40:]).lower()
+        to  = ("0x" + lg["topics"][2].hex()[-40:]).lower()
         raw = int(lg["data"].hex(), 16) if lg["data"] else 0
         amount_token = raw / (10 ** decimals)         # per-token decimals
 
         event = {
             "symbol": symbol, "peg": peg,
+            # Key must match the Kafka table column exactly: JSONEachRow maps by
+            # name, so "type" would silently land every row as tx_type = ''.
+            "tx_type": classify(frm, to),             # <-- 3. classification
             "tx_hash": lg["transactionHash"].hex(),
             "log_index": lg["logIndex"],
             "block_number": bn, "block_timestamp": block_ts,
-            "from_address": frm.lower(), "to_address": to.lower(),
+            "from_address": frm, "to_address": to,
             "amount_token": amount_token,
             "usd_rate": rate,
             "amount_usd": amount_token * rate,

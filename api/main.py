@@ -5,10 +5,6 @@ Design notes:
 - Fixed, named endpoints only. Each runs one pre-written, parameterized query.
   There is NO general query endpoint, so the public API cannot be used to run
   arbitrary SQL against the database.
-- Credentials (ClickHouse password) are read server-side from the environment
-  and never exposed to the browser.
-- CORS is enabled so the frontend (served from a different origin, e.g.
-  localhost during testing) can call these endpoints.
 
 Methodology - mints & burns:
   A transfer FROM the zero address is a mint; a transfer TO the zero (or dead)
@@ -235,12 +231,7 @@ def senders_per_minute(minutes: int = Query(60, ge=5, le=1440)):
 def payments_per_minute_by_symbol(minutes: int = Query(60, ge=5, le=1440)):
     """Payment count per minute, broken out per stablecoin (long format: one row
     per minute+symbol). Mints/burns excluded. Frontend pivots to series.
-
-    Uses uniqExact(tx_hash) - the same measure as /api/payments-per-minute - so
-    a transaction carrying several transfer logs of one symbol counts once, and
-    the stacked per-symbol chart reconciles with the unsegmented total chart.
-    (A tx moving two different symbols counts once under each, which is correct
-    for a per-symbol breakdown.)"""
+    """
     c = client()
     q = """
         SELECT
@@ -274,7 +265,7 @@ def volume_by_symbol_per_minute(minutes: int = Query(60, ge=5, le=1440)):
         FROM stablecoin_transfers
         WHERE block_timestamp > now() - toIntervalMinute(%(minutes)s)
           AND from_address NOT IN (%(zero)s, %(dead)s)
-          AND to_address   NOT IN (%(zero)s, %(dead)s)
+          AND to_address NOT IN (%(zero)s, %(dead)s)
         GROUP BY minute, symbol
         ORDER BY minute, symbol
     """
@@ -283,6 +274,49 @@ def volume_by_symbol_per_minute(minutes: int = Query(60, ge=5, le=1440)):
     for r in rows:
         r["minute"] = r["minute"].isoformat()
     return rows
+
+@app.get("/api/volume-by-tx-type-per-minute")
+def volume_tx_type_per_minute(minutes: int =Query(60, ge=5, le=1440)):
+    c = client()
+    q = """
+        SELECT
+            toStartOfMinute(block_timestamp) AS minute,
+            tx_type,
+            round(sum(amount_usd), 2) AS usd_volume
+        FROM stablecoin_transfers
+        WHERE block_timestamp > now() - toIntervalMinute(%(minutes)s)
+        AND from_address NOT IN (%(zero)s, %(dead)s)
+        AND to_address NOT IN (%(zero)s, %(dead)s)
+        GROUP BY minute, tx_type
+        ORDER BY minute, tx_type
+
+    """
+    res = c.query(q, parameters=base_params(minutes=minutes))
+    rows = rows_to_dicts(res)
+    for r in rows:
+        r["minute"] = r["minute"].isoformat()
+    return rows
+
+
+@app.get("/api/volume-by-tx-type")
+def volume_by_type(hours: int = Query(24, ge=1, le=168)):
+    """USD volume grouped by tx type(p2p v lending v swaps, etc)."""
+    c = client()
+    q = """
+        SELECT
+            tx_type,
+            round(sum(amount_usd), 2) AS usd_volume,
+            count() AS transfers
+        FROM stablecoin_transfers
+        WHERE block_timestamp > now() - toIntervalHour(%(hours)s)
+          AND from_address NOT IN (%(zero)s, %(dead)s)
+          AND to_address NOT IN (%(zero)s, %(dead)s)
+        GROUP BY tx_type
+        ORDER BY usd_volume DESC
+    """
+    res = c.query(q, parameters=base_params(hours=hours))
+    return rows_to_dicts(res)
+
 
 
 @app.get("/api/avg-payment-by-symbol")
