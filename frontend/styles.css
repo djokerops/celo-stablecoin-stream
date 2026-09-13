@@ -164,12 +164,31 @@ body {
 
 /* ── header ──────────────────────────────────────────────────────────────── */
 header {
-  display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  /* One token drives both title lines so they stay the same size as the
+     breakpoints step it down — scoped here, not on :root, because nothing
+     outside the header uses it. */
+  --title: 21px;
+  display: flex; flex-direction: column; gap: 3px;
   padding-bottom: 20px; margin-bottom: 24px;
   border-bottom: 1px solid var(--hairline);
 }
-h1 { font-size: 21px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
-h1 .dim { color: var(--ink-3); font-weight: 400; }
+
+/* Name, live state and theme switch share one line at every width. The switch
+   is pushed right by the margin-left:auto already on .toggle; nothing in the
+   row may wrap, since a wrapping row is exactly what dropped the switch onto a
+   line of its own on phones. */
+.titlebar { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.titlebar h1, .titlebar .live { white-space: nowrap; }
+.titlebar .live, .titlebar .toggle { flex-shrink: 0; }
+
+h1 { font-size: var(--title); font-weight: 600; letter-spacing: -.015em; margin: 0; }
+
+/* Reads as the second line of the title, not a second heading: same size and
+   tracking as the name, one step down in ink. */
+.tagline {
+  margin: 0; font-size: var(--title); font-weight: 400;
+  letter-spacing: -.015em; color: var(--ink-3);
+}
 .live {
   display: inline-flex; align-items: center; gap: 7px;
   font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
@@ -370,14 +389,13 @@ tbody tr:hover td { background: var(--surface-hi); color: var(--ink); }
   .topline { grid-template-columns: 1fr; }
   .tile { padding: 15px 16px 17px; }
   .chart, .panel.tall .chart { height: 248px; }
-  h1 { font-size: 19px; }
+  header { --title: 19px; }
 }
 @media (max-width: 480px) {
   .wrap { padding: 18px 12px 44px; }
   .panel { padding: 14px 13px 12px; }
   .chart, .panel.tall .chart { height: 216px; }
-  h1 { font-size: 17px; }
-  h1 .dim { display: block; }           /* title breaks onto two lines cleanly */
+  header { --title: 17px; }
   .phead h2 { font-size: 12.5px; }
   .phead .note { display: none; }       /* the range toggle already states it */
   /* one centred column — the side zones have no room to sit beside the

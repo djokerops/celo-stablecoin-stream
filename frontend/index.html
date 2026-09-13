@@ -28,16 +28,23 @@
 <div class="wrap">
 
 <header>
-  <h1>Celo Flow <span class="dim">/ live stablecoin payments</span></h1>
-  <span class="live"><span class="pulse"></span>Streaming</span>
-  <div class="toggle" id="theme-toggle" role="group" aria-label="Colour theme">
-    <button type="button" class="icon" data-theme="dark" aria-pressed="true" aria-label="Dark theme" title="Dark theme">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-    </button>
-    <button type="button" class="icon" data-theme="light" aria-pressed="false" aria-label="Light theme" title="Light theme">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-    </button>
+  <!-- Two rows on every device: the name, its live state and the theme switch
+       share one line; the descriptor sits under them. Splitting the tagline out
+       of the <h1> is what makes that possible — it used to be an inline span, so
+       it could only ever wrap, never sit on a line of its own. -->
+  <div class="titlebar">
+    <h1>Celo Flow</h1>
+    <span class="live"><span class="pulse"></span>Streaming</span>
+    <div class="toggle" id="theme-toggle" role="group" aria-label="Colour theme">
+      <button type="button" class="icon" data-theme="dark" aria-pressed="true" aria-label="Dark theme" title="Dark theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <button type="button" class="icon" data-theme="light" aria-pressed="false" aria-label="Light theme" title="Light theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      </button>
+    </div>
   </div>
+  <p class="tagline">live stablecoin payments</p>
 </header>
 
 <div class="err" id="err"></div>
