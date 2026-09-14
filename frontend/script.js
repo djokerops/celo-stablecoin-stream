@@ -15,11 +15,13 @@ const REFRESH  = 30000;
 /* Defaults. The KPI row and the receivers table open on 1H, not 24H, because
    a 24h window scans ~7.8M rows on the VM (18-26s) against ~500K for an hour
    (1-3s) - and those two are what the reader looks at first, so they are the
-   ones that must not keep the page waiting. The remaining three keep 24H:
-   a share-of-volume breakdown is more meaningful over a full day, and they
-   sit below the fold where their latency is less costly. Every selector is
-   still one click from the other range. */
-const RANGES = { top: 1, symbol: 24, peg: 24, txtype: 24, recv: 1 };
+   ones that must not keep the page waiting. The transaction-type pie joins
+   them: it sits beside a 60-minute chart, so leaving it on 24H put two
+   different windows side by side under one section. Stablecoin and peg keep
+   24H - a share-of-volume split reads better over a full day, and both sit
+   below the fold where latency costs less. Every selector is still one click
+   from the other range. */
+const RANGES = { top: 1, symbol: 24, peg: 24, txtype: 1, recv: 1 };
 
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SANS = '"Archivo", system-ui, sans-serif';
