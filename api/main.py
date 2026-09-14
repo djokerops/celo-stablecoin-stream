@@ -44,50 +44,20 @@ app.add_middleware(
 # Guard rails, added after the 2026-09-14 outage. Two separate failures were
 # invisible that day and both are covered here:
 #
-#   1. No socket timeout. When ClickHouse stopped answering, every request hung
-#      indefinitely. These endpoints are sync `def`, so each hung request held a
-#      threadpool worker; once all were held, every DB route stalled while the
-#      async ones (/docs, /openapi.json) kept answering - which is exactly the
-#      symptom that made the server look half-alive.
-#   2. No per-query ceiling. One heavy query could consume the server's whole
-#      memory budget and take the instance down with it. A query that asks for
-#      too much should die alone.
+#   1. No socket timeout. 
+#   2. No per-query ceiling. 
 CH_CONNECT_TIMEOUT = int(os.environ.get("CLICKHOUSE_CONNECT_TIMEOUT", "3"))
-# Server-side query cap, and the socket timeout that must outlive it: if the
-# socket gave up first the server would keep burning CPU on a query nobody is
-# waiting for any more.
+
 CH_MAX_EXECUTION = int(os.environ.get("CLICKHOUSE_MAX_EXECUTION", "25"))
 CH_QUERY_TIMEOUT = CH_MAX_EXECUTION + 5
-
-# Result-cache lifetime. Kept just under the board's 30s refresh so a viewer
-# sees fresh numbers each tick rather than the same ones twice; the staleness
-# this introduces is therefore never worse than the refresh interval already is.
 CH_CACHE_TTL = int(os.environ.get("CLICKHOUSE_CACHE_TTL", "25"))
 
-# Per-query limits sent with every statement, sized against the server's 3.26
-# GiB ceiling so one runaway query fails while the server stays up.
 CH_SETTINGS = {
     "max_memory_usage": 1_500_000_000,
     "max_execution_time": CH_MAX_EXECUTION,
-    # THROW, not "break". "break" returns whatever rows the query had managed
-    # to produce - for an aggregation that is usually none - with HTTP 200, so
-    # a query that ran out of time is indistinguishable from a window with no
-    # activity. The board then draws empty charts and advances its "Updated"
-    # stamp, reporting healthy while showing nothing. A slow query must fail
-    # loudly; partial aggregates are not a safe default.
     "timeout_overflow_mode": "throw",
-
-    # Result cache. Every viewer re-runs the identical 24h aggregate every 30s
-    # and the answer barely moves, so the work is almost entirely redundant:
-    # on the VM those queries scan ~7.8M rows at ~400K rows/s and take 18-26s,
-    # against 0.17s for the same query on a laptop. Caching the RESULT is the
-    # cheap half of the fix; pre-aggregated rollups are the durable half.
     "use_query_cache": 1,
     "query_cache_ttl": CH_CACHE_TTL,
-    # Mandatory here, not optional: every query filters on now(), and the
-    # default for a nondeterministic function is to refuse with "Code: 704 -
-    # the query result was not cached". "save" stores it anyway, which is
-    # correct because the entry expires after query_cache_ttl regardless.
     "query_cache_nondeterministic_function_handling": "save",
 }
 

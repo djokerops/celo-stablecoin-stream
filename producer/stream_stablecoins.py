@@ -149,9 +149,8 @@ def usd_rate(symbol, address, peg):
 
         # Sanity bound: Mento feeds vary in scale/direction, so a raw
         # num/den is not always a clean USD price. Accept the oracle only
-        # if it's within a sane band of the (now live) reference rate;
-        # anything wildly off (e.g. COPm reading ~233 vs ~0.00032) is a
-        # misread, not real FX drift, so fall back.
+        # if it's within a sane band of reference rate;
+        # anything wildly off is a misread, not real FX drift, so fall back.
         lo, hi = fallback * 0.5, fallback * 2.0
         if lo <= raw_rate <= hi:
             return raw_rate

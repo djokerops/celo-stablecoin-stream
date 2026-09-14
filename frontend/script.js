@@ -12,16 +12,15 @@ const REFRESH  = 30000;
 /* Per-section time range, in hours. Each of these four sections carries its own
    1H/24H selector, so they are tracked independently and every loader reads its
    own key at call time — a refresh tick never resets what the user picked. */
-/* Defaults. The KPI row and the receivers table open on 1H, not 24H, because
-   a 24h window scans ~7.8M rows on the VM (18-26s) against ~500K for an hour
-   (1-3s) - and those two are what the reader looks at first, so they are the
-   ones that must not keep the page waiting. The transaction-type pie joins
-   them: it sits beside a 60-minute chart, so leaving it on 24H put two
-   different windows side by side under one section. Stablecoin and peg keep
-   24H - a share-of-volume split reads better over a full day, and both sit
-   below the fold where latency costs less. Every selector is still one click
-   from the other range. */
-const RANGES = { top: 1, symbol: 24, peg: 24, txtype: 1, recv: 1 };
+/* Defaults. Every range selector opens on 1H.
+
+   A 24h window scans ~8M rows on the VM and took 18-26s before the result
+   cache; an hour is ~500K rows and 1-3s. Since the per-minute charts beside
+   them already show 60 minutes, 1H also means the whole board describes one
+   consistent window on arrival instead of mixing two. Each selector is still
+   one click from 24H, which is now a deliberate request for the slower,
+   wider view rather than something every visitor pays for on load. */
+const RANGES = { top: 1, symbol: 1, peg: 1, txtype: 1, recv: 1 };
 
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SANS = '"Archivo", system-ui, sans-serif';
