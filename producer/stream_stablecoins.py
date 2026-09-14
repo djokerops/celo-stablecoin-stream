@@ -44,6 +44,7 @@ TOKENS = {
     "wCOP":   ("0x8a1d45e102e886510e891d2ec656a708991e2d76", 18, "COP"),
     "wPEN":   ("0x4F34c8b3b5FB6D98Da888F0feA543d4d9C9F2eBE", 18, "PEN"),
     "wCLP":   ("0x61D450a098b6a7f69fC4b98CE68198fe59768651", 18, "CLP"),
+    "USAT":   ("0xD2ab3C9A02DBBAB236BfEC45D1d755DF4267F771", 6, "USD"),
 }
 
 # hardcoded backstop — used only if the live FX API lacks a currency

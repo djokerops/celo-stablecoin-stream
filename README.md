@@ -1,8 +1,8 @@
 # celo-stablecoin-stream
 
-A live stream of stablecoin payments on Celo. It watches every `Transfer` event for 29 stablecoins as blocks land, converts each amount to USD, and lands it in ClickHouse for querying seconds after it happened on-chain.
+A live stream of stablecoin payments on Celo. It watches every `Transfer` event for 30 stablecoins as blocks land, converts each amount to USD, and lands it in ClickHouse for querying seconds after it happened on-chain.
 
-**[See live dashboard](https://celoflow-nine.vercel.app)**
+**[See live dashboard](https://celoflow.stream)**
 
 ## What it does
 
@@ -18,7 +18,7 @@ Tracked tokens (29):
 
 - **Mento** — `USDm`, `EURm`, `BRLm`, `AUDm`, `CADm`, `CHFm`, `COPm`, `GBPm`, `GHSm`, `JPYm`, `KESm`, `NGNm`, `PHPm`, `XOFm`, `ZARm`
 - **Ripio** — `wARS`, `wBRL`, `wMXN`, `wCOP`, `wPEN`, `wCLP`
-- **Other issuers** — `USDC`, `USDT`, `BRLA`, `VCHF`, `VGBP`, `USDGLO`, `USDM`, `cNGN`
+- **Other issuers** — `USDC`, `USDT`, `USAT`, `BRLA`, `VCHF`, `VGBP`, `USDGLO`, `USDM`, `cNGN`
 
 **USD pricing.** USD-pegged tokens are 1.0. Everything else reads `medianRate` from Mento's `SortedOracles`, but only accepts it within 0.5x–2x of a reference peg — Mento feeds vary in scale and direction, so a raw `num/den` isn't always a clean USD price. Out-of-band reads fall back to the hardcoded reference rate. Treat `amount_usd` as indicative, not settlement-grade.
 
