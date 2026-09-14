@@ -42,8 +42,20 @@ services:
      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
    ulimits:
      nofile: { soft: 262144, hard: 262144 }
+   # Ceiling above the server's own 2.5G cap, so ClickHouse hits its limit and
+   # returns an error instead of being OOM-killed by the kernel.
+   mem_limit: 3g
    volumes:
      - clickhouse_data:/var/lib/clickhouse
+     # Mount the FILE, not the directory. Mounting the directory shadows the
+     # image's own docker_related_config.xml, which is what supplies
+     # <listen_host>::</listen_host> - without it ClickHouse binds loopback only
+     # and every other container gets "connection refused" on 8123.
+     - ./clickhouse/config.d/low-memory.xml:/etc/clickhouse-server/config.d/low-memory.xml:ro
+     # ClickHouse logs to files, not stdout, so `docker compose logs clickhouse`
+     # shows only boot lines. Unmounted they live in the container layer and
+     # `down` destroys them - which is exactly what happened on 2026-09-14.
+     - clickhouse_logs:/var/log/clickhouse-server
 
  producer:
    build: ./producer
@@ -69,3 +81,4 @@ services:
 
 volumes:
  clickhouse_data:
+ clickhouse_logs:

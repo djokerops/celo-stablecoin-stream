@@ -1,0 +1,78 @@
+<clickhouse>
+    <!-- Tuning for a small single-node VM (~4.5 GiB usable RAM).
+
+         Written after an outage on 2026-09-14: baseline RSS sat at 2.90 GiB
+         before any query ran, leaving ~1.2 GiB of headroom, and /api/summary
+         then died with MEMORY_LIMIT_EXCEEDED while CPU held 100% for 10+
+         minutes. The server stayed up and answered /ping, so it looked alive
+         while every real query failed. Everything here attacks that baseline. -->
+
+    <!-- Hard ceiling for the whole server, set BELOW the container limit on
+         purpose: ClickHouse should refuse a query rather than be OOM-killed,
+         because a refusal is a readable error and a kill is a mystery.
+         2.5 GiB, not the 4.07 GiB it picked for itself, because it is not
+         alone on this box - Redpanda is capped at 1G and api/producer/console
+         want a few hundred MB more. Verify against `free -h` on the VM and
+         raise it only if there is genuinely headroom. -->
+    <max_server_memory_usage>2500000000</max_server_memory_usage>
+
+    <!-- Caches, down from the 5 GiB/8 GiB defaults that assume a big host.
+         These are pure baseline RSS: they buy query speed we cannot afford
+         when the memory they occupy is what makes queries fail. -->
+    <mark_cache_size>268435456</mark_cache_size>
+    <uncompressed_cache_size>134217728</uncompressed_cache_size>
+    <compiled_expression_cache_size>67108864</compiled_expression_cache_size>
+
+    <!-- Halve the background concurrency (default 16): a 1-2 vCPU box cannot
+         usefully run that many merges at once, and oversized pools are what
+         pinned CPU at 100% while starving foreground queries.
+
+         Not lowered further on purpose. Merges are how part count comes back
+         down, so throttling them too hard trades a CPU spike for an ever-
+         growing pile of parts and progressively slower queries. The real cure
+         for the storm is creating fewer parts in the first place - see the
+         batching settings in 02_kafka.sql. -->
+    <background_pool_size>8</background_pool_size>
+    <background_schedule_pool_size>8</background_schedule_pool_size>
+    <background_message_broker_schedule_pool_size>2</background_message_broker_schedule_pool_size>
+    <background_common_pool_size>4</background_common_pool_size>
+
+    <!-- These thresholds are reserved slots in the merge pool, and ClickHouse
+         refuses to start if they exceed background_pool_size * the mutations
+         concurrency ratio (8 * 2 = 16 here). The defaults (20 and 8) assume the
+         default pool of 16, so they have to come down with it. -->
+    <merge_tree>
+        <number_of_free_entries_in_pool_to_execute_mutation>6</number_of_free_entries_in_pool_to_execute_mutation>
+        <number_of_free_entries_in_pool_to_lower_max_size_of_merge>4</number_of_free_entries_in_pool_to_lower_max_size_of_merge>
+        <number_of_free_entries_in_pool_to_execute_optimize_entire_partition>8</number_of_free_entries_in_pool_to_execute_optimize_entire_partition>
+    </merge_tree>
+
+    <!-- System log tables were merging during the outage (the stray
+         tmp_merge on a monthly partition). They are observability we are not
+         reading, paid for in the exact CPU, RAM and merges that took the
+         server down. query_log is kept - it is the one that explains a future
+         incident - but capped and flushed less often. -->
+    <metric_log remove="remove"/>
+    <asynchronous_metric_log remove="remove"/>
+    <trace_log remove="remove"/>
+    <part_log remove="remove"/>
+    <text_log remove="remove"/>
+    <session_log remove="remove"/>
+    <crash_log remove="remove"/>
+    <processors_profile_log remove="remove"/>
+    <query_views_log remove="remove"/>
+    <query_metric_log remove="remove"/>
+    <backup_log remove="remove"/>
+    <blob_storage_log remove="remove"/>
+    <error_log remove="remove"/>
+    <latency_log remove="remove"/>
+
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <flush_interval_milliseconds>30000</flush_interval_milliseconds>
+        <!-- 14 days is plenty to explain an incident, and stops the table
+             becoming its own merge problem. -->
+        <ttl>event_date + INTERVAL 14 DAY DELETE</ttl>
+    </query_log>
+</clickhouse>

@@ -17,7 +17,7 @@ Methodology - mints & burns:
 
 import os
 import clickhouse_connect
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 # --- config from environment ---
@@ -41,10 +41,38 @@ app.add_middleware(
 )
 
 
+# Guard rails, added after the 2026-09-14 outage. Two separate failures were
+# invisible that day and both are covered here:
+#
+#   1. No socket timeout. When ClickHouse stopped answering, every request hung
+#      indefinitely. These endpoints are sync `def`, so each hung request held a
+#      threadpool worker; once all were held, every DB route stalled while the
+#      async ones (/docs, /openapi.json) kept answering - which is exactly the
+#      symptom that made the server look half-alive.
+#   2. No per-query ceiling. One heavy query could consume the server's whole
+#      memory budget and take the instance down with it. A query that asks for
+#      too much should die alone.
+CH_CONNECT_TIMEOUT = int(os.environ.get("CLICKHOUSE_CONNECT_TIMEOUT", "3"))
+CH_QUERY_TIMEOUT = int(os.environ.get("CLICKHOUSE_QUERY_TIMEOUT", "15"))
+
+# Per-query limits sent with every statement. Well under the server's 2.5 GiB
+# ceiling so a single runaway query fails while the server stays up.
+CH_SETTINGS = {
+    "max_memory_usage": 1_000_000_000,
+    "max_execution_time": CH_QUERY_TIMEOUT,
+    # Return partial results rather than an exception if the cap is hit; the
+    # board showing slightly short numbers beats it showing nothing.
+    "timeout_overflow_mode": "break",
+}
+
+
 def client():
     return clickhouse_connect.get_client(
         host=CH_HOST, port=CH_PORT, username=CH_USER,
         password=CH_PASSWORD, database=CH_DATABASE,
+        connect_timeout=CH_CONNECT_TIMEOUT,
+        send_receive_timeout=CH_QUERY_TIMEOUT,
+        settings=CH_SETTINGS,
     )
 
 """Turn a clickhouse_connect query result into a list of plain dicts."""
@@ -59,13 +87,19 @@ def base_params(**extra):
 
 
 @app.get("/api/health")
-def health():
+def health(response: Response):
+    """Liveness AND readiness. Returns 503 when the database is unreachable, so
+    a monitor can tell the difference without parsing the body - on 2026-09-14
+    this endpoint hung instead of reporting "degraded", because a socket with no
+    timeout never raises the exception the except block was waiting for. The
+    timeouts on client() are what make this branch reachable at all."""
     try:
         c = client()
         c.query("SELECT 1")
         return {"status": "ok", "database": "reachable"}
     except Exception as e:
-        return {"status": "degraded", "error": str(e)}
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "degraded", "database": "unreachable", "error": str(e)}
 
 
 @app.get("/api/summary")
