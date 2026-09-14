@@ -59,6 +59,11 @@ CH_CONNECT_TIMEOUT = int(os.environ.get("CLICKHOUSE_CONNECT_TIMEOUT", "3"))
 CH_MAX_EXECUTION = int(os.environ.get("CLICKHOUSE_MAX_EXECUTION", "25"))
 CH_QUERY_TIMEOUT = CH_MAX_EXECUTION + 5
 
+# Result-cache lifetime. Kept just under the board's 30s refresh so a viewer
+# sees fresh numbers each tick rather than the same ones twice; the staleness
+# this introduces is therefore never worse than the refresh interval already is.
+CH_CACHE_TTL = int(os.environ.get("CLICKHOUSE_CACHE_TTL", "25"))
+
 # Per-query limits sent with every statement, sized against the server's 3.26
 # GiB ceiling so one runaway query fails while the server stays up.
 CH_SETTINGS = {
@@ -71,6 +76,19 @@ CH_SETTINGS = {
     # stamp, reporting healthy while showing nothing. A slow query must fail
     # loudly; partial aggregates are not a safe default.
     "timeout_overflow_mode": "throw",
+
+    # Result cache. Every viewer re-runs the identical 24h aggregate every 30s
+    # and the answer barely moves, so the work is almost entirely redundant:
+    # on the VM those queries scan ~7.8M rows at ~400K rows/s and take 18-26s,
+    # against 0.17s for the same query on a laptop. Caching the RESULT is the
+    # cheap half of the fix; pre-aggregated rollups are the durable half.
+    "use_query_cache": 1,
+    "query_cache_ttl": CH_CACHE_TTL,
+    # Mandatory here, not optional: every query filters on now(), and the
+    # default for a nondeterministic function is to refuse with "Code: 704 -
+    # the query result was not cached". "save" stores it anyway, which is
+    # correct because the entry expires after query_cache_ttl regardless.
+    "query_cache_nondeterministic_function_handling": "save",
 }
 
 

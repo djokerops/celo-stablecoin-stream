@@ -12,7 +12,14 @@ const REFRESH  = 30000;
 /* Per-section time range, in hours. Each of these four sections carries its own
    1H/24H selector, so they are tracked independently and every loader reads its
    own key at call time — a refresh tick never resets what the user picked. */
-const RANGES = { top: 24, symbol: 24, peg: 24, txtype: 24, recv: 24 };
+/* Defaults. The KPI row and the receivers table open on 1H, not 24H, because
+   a 24h window scans ~7.8M rows on the VM (18-26s) against ~500K for an hour
+   (1-3s) - and those two are what the reader looks at first, so they are the
+   ones that must not keep the page waiting. The remaining three keep 24H:
+   a share-of-volume breakdown is more meaningful over a full day, and they
+   sit below the fold where their latency is less costly. Every selector is
+   still one click from the other range. */
+const RANGES = { top: 1, symbol: 24, peg: 24, txtype: 24, recv: 1 };
 
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SANS = '"Archivo", system-ui, sans-serif';

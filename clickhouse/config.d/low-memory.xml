@@ -67,6 +67,14 @@
     <error_log remove="remove"/>
     <latency_log remove="remove"/>
 
+    <!-- The result cache holds a handful of small aggregate rows, so the 1 GiB
+         default is wildly oversized for a box where memory is the constraint
+         that caused the outage in the first place. -->
+    <query_cache>
+        <max_size_in_bytes>67108864</max_size_in_bytes>
+        <max_entries>256</max_entries>
+    </query_cache>
+
     <query_log>
         <database>system</database>
         <table>query_log</table>
