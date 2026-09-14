@@ -15,4 +15,6 @@ CREATE TABLE stablecoin_transfers
 )
 ENGINE = MergeTree
 PARTITION BY toDate(block_timestamp)
-ORDER BY (block_timestamp, symbol, tx_hash, log_index);
+ORDER BY (block_timestamp, symbol, tx_hash, log_index)
+TTL block_timestamp + INTERVAL 90 DAY
+SETTINGS ttl_only_drop_parts = 1;
