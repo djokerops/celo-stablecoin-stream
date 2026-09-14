@@ -53,16 +53,24 @@ app.add_middleware(
 #      memory budget and take the instance down with it. A query that asks for
 #      too much should die alone.
 CH_CONNECT_TIMEOUT = int(os.environ.get("CLICKHOUSE_CONNECT_TIMEOUT", "3"))
-CH_QUERY_TIMEOUT = int(os.environ.get("CLICKHOUSE_QUERY_TIMEOUT", "15"))
+# Server-side query cap, and the socket timeout that must outlive it: if the
+# socket gave up first the server would keep burning CPU on a query nobody is
+# waiting for any more.
+CH_MAX_EXECUTION = int(os.environ.get("CLICKHOUSE_MAX_EXECUTION", "25"))
+CH_QUERY_TIMEOUT = CH_MAX_EXECUTION + 5
 
-# Per-query limits sent with every statement. Well under the server's 2.5 GiB
-# ceiling so a single runaway query fails while the server stays up.
+# Per-query limits sent with every statement, sized against the server's 3.26
+# GiB ceiling so one runaway query fails while the server stays up.
 CH_SETTINGS = {
-    "max_memory_usage": 1_000_000_000,
-    "max_execution_time": CH_QUERY_TIMEOUT,
-    # Return partial results rather than an exception if the cap is hit; the
-    # board showing slightly short numbers beats it showing nothing.
-    "timeout_overflow_mode": "break",
+    "max_memory_usage": 1_500_000_000,
+    "max_execution_time": CH_MAX_EXECUTION,
+    # THROW, not "break". "break" returns whatever rows the query had managed
+    # to produce - for an aggregation that is usually none - with HTTP 200, so
+    # a query that ran out of time is indistinguishable from a window with no
+    # activity. The board then draws empty charts and advances its "Updated"
+    # stamp, reporting healthy while showing nothing. A slow query must fail
+    # loudly; partial aggregates are not a safe default.
+    "timeout_overflow_mode": "throw",
 }
 
 

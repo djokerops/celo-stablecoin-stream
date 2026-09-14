@@ -42,9 +42,9 @@ services:
      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
    ulimits:
      nofile: { soft: 262144, hard: 262144 }
-   # Ceiling above the server's own 2.5G cap, so ClickHouse hits its limit and
-   # returns an error instead of being OOM-killed by the kernel.
-   mem_limit: 3g
+   # Ceiling above the server's own 3.26 GiB cap, so ClickHouse hits its own
+   # limit and returns an error instead of being OOM-killed by the kernel.
+   mem_limit: 4g
    volumes:
      - clickhouse_data:/var/lib/clickhouse
      # Mount the FILE, not the directory. Mounting the directory shadows the

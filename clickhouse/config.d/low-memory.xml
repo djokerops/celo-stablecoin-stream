@@ -10,16 +10,16 @@
     <!-- Hard ceiling for the whole server, set BELOW the container limit on
          purpose: ClickHouse should refuse a query rather than be OOM-killed,
          because a refusal is a readable error and a kill is a mystery.
-         2.5 GiB, not the 4.07 GiB it picked for itself, because it is not
-         alone on this box - Redpanda is capped at 1G and api/producer/console
-         want a few hundred MB more. Verify against `free -h` on the VM and
-         raise it only if there is genuinely headroom. -->
-    <max_server_memory_usage>2500000000</max_server_memory_usage>
+         Measured on the VM: 5.51 GiB total, with api+producer+redpanda+console
+         together using ~550 MiB, so ~4.4 GiB is genuinely available. 3.26 GiB
+         leaves the OS a margin and still roughly triples the query headroom
+         over the old baseline. Re-check with `free -h` if the box changes. -->
+    <max_server_memory_usage>3500000000</max_server_memory_usage>
 
     <!-- Caches, down from the 5 GiB/8 GiB defaults that assume a big host.
          These are pure baseline RSS: they buy query speed we cannot afford
          when the memory they occupy is what makes queries fail. -->
-    <mark_cache_size>268435456</mark_cache_size>
+    <mark_cache_size>536870912</mark_cache_size>
     <uncompressed_cache_size>134217728</uncompressed_cache_size>
     <compiled_expression_cache_size>67108864</compiled_expression_cache_size>
 
