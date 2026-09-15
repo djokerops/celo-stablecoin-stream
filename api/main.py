@@ -104,7 +104,13 @@ def summary(hours: int = Query(24, ge=1, le=168)):
     q = """
         SELECT
             round(sum(amount_usd), 2)   AS total_usd_volume,
-            count()                     AS transfer_count,
+            -- Distinct TRANSACTIONS, not transfer logs. One transaction can
+            -- emit many Transfer events (a swap route, a batch payout), so a
+            -- bare count() overstates activity roughly tenfold here: 10.29M
+            -- transfer rows resolve to 1.06M transactions. Matches the measure
+            -- /api/payments-per-minute already uses, so the headline figure and
+            -- the per-minute chart now count the same thing.
+            uniqExact(tx_hash)          AS transaction_count,
             uniqExact(from_address)     AS unique_senders,
             uniqExact(symbol)           AS active_coins
         FROM stablecoin_transfers

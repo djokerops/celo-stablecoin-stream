@@ -420,7 +420,7 @@ function renderSummary() {
   document.querySelectorAll("#p-top .rng").forEach(el => el.textContent = `· ${RANGES.top}h`);
   document.getElementById("s-volume").textContent    = fmtUsd(s.total_usd_volume || 0);
   document.getElementById("s-senders").textContent   = fmtNum(s.unique_senders || 0);
-  document.getElementById("s-transfers").textContent = fmtNum(s.transfer_count || 0);
+  document.getElementById("s-transactions").textContent = fmtNum(s.transaction_count || 0);
   document.getElementById("s-coins").textContent     = fmtNum(s.active_coins || 0);
 }
 
