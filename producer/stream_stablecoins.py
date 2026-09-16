@@ -45,14 +45,14 @@ TOKENS = {
     "wPEN":   ("0x4F34c8b3b5FB6D98Da888F0feA543d4d9C9F2eBE", 18, "PEN"),
     "wCLP":   ("0x61D450a098b6a7f69fC4b98CE68198fe59768651", 18, "CLP"),
     "USAT":   ("0xD2ab3C9A02DBBAB236BfEC45D1d755DF4267F771", 6, "USD"),
+    "IDRX":   ("0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22", 2, "IDR"),
 }
 
 # hardcoded backstop — used only if the live FX API lacks a currency
 
 HARDCODED_USD = {"USD": 1.0, "EUR": 1.08, "BRL": 0.196, "AUD": 0.71, "CAD": 0.72,
-                 "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064,
-                 "CLP": 0.00108, "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018,
-                 "ZAR": 0.062, "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981}
+                 "CHF": 1.22, "COP": 0.00032, "GBP": 1.35, "GHS": 0.089, "JPY": 0.0064, "CLP": 0.00108, "KES": 0.0077, "NGN": 0.0007, "PHP": 0.016, "XOF": 0.0018, "ZAR": 0.062, "ARS": 0.00066, "MXN": 0.05912, "PEN": 0.2981, "IDR": 0.0000565
+                 }
 
 # Zero/burn addresses for mint/burn classification
 ZERO_ADDR = "0x0000000000000000000000000000000000000000"
