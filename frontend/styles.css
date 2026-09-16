@@ -4,17 +4,30 @@
    overrides both by stamping data-theme on <html>. script.js reads every chart
    colour back off these custom properties, so there is no second copy in JS.
 
-   --palette: 29 slots, same hues and same slot order in both themes (a symbol
-   keeps its identity when the theme flips) — only the steps differ. Generated,
-   not hand-picked: an even OKLCH hue wheel ordered to maximise the worst
-   ADJACENT pair under CVD simulation, each set validated on its own surface:
-     dark  #121214 → adjacent CVD ΔE 14.4 · normal ΔE 20.7 · all ≥3:1
-     light #fdfdfc → adjacent CVD ΔE 15.5 · normal ΔE 19.1 · all ≥3:1
-   Adjacent, not all-pairs: 29 categories can't separate every pair (ceiling
-   ≈ΔE 5 vs a floor of 15). Stacks only butt neighbours together and the stack
-   order is pinned to slot order, so on-screen adjacencies are exactly the
-   validated pairlist; legend, hover-isolate, tooltip and table view carry
-   identity for everything else. */
+   --palette: 40 slots, same hues and same slot order in both themes (a symbol
+   keeps its identity when the theme flips) — only the L/C steps differ, and the
+   two sets track each other to within 1.7° of hue. Generated, not hand-picked:
+   an even OKLCH hue wheel ordered to maximise the worst ADJACENT pair under CVD
+   simulation, measured in CIEDE2000 against the surface each set actually sits
+   on. Regenerated 2026-09-16 when the 30th and 31st tokens (USAT, IDRX) ran off
+   the end of a 29-slot wheel:
+     dark  on #1b1626 → adjacent 23.1 · normal 32.6 · contrast 4.38–10.80:1
+     light on #fcf6f2 → adjacent 22.6 · normal 28.1 · contrast 4.46–11.53:1
+   Those adjacent figures are the worst case across normal, protan, deutan and
+   tritan vision, and they are ~2.3× the 29-slot palette they replace (10.2 dark
+   / 8.2 light on the same measure) despite carrying eleven more colours. The
+   gain is lightness, not hue: CVD compresses hue but preserves lightness, so
+   the old near-constant band (OKLCH L 0.55–0.65) was the thing collapsing. This
+   wheel steps L in a repeating pattern, which is what survives the simulation.
+
+   Adjacent, not all-pairs: 40 categories cannot separate every pair — the worst
+   all-pairs distance here is ≈0.1, i.e. some two slots ARE indistinguishable to
+   a colour-blind reader, as was already true at 29 slots. Stacks only butt
+   neighbours together and the stack order is pinned to slot order, so on-screen
+   adjacencies are exactly the validated pairlist; legend, hover-isolate,
+   tooltip and table view carry identity for everything else. Anything that can
+   place ARBITRARY slots side by side — a pie, which ranks by value — must pick
+   its slots for all-pairs separation instead; see TX_SLOTS in script.js. */
 
 /* Brand colours sampled from celo.org, not guessed:
    yellow #fdff52 · purple #b591ff · cream #fcf6f2 · deep purple ink #1e002b.
@@ -59,7 +72,7 @@
   --tile-bg:   #1b1626;    /* = surface; the yellow wash is a light-mode move */
   --focus:     #b591ff;
 
-  --palette: "#bb4841,#7382e6,#8d941a,#a74b93,#847400,#00a0bb,#9e6600,#00a59b,#c5771a,#b869be,#178944,#1e96d3,#b6456d,#ad8600,#0093a3,#af5712,#3690e3,#d76070,#416fca,#1ba475,#9055b1,#5aa140,#0081ad,#d66741,#7061c5,#008b6f,#9a74d9,#608013,#cd619a";
+  --palette: "#d7611f,#2fbabe,#b77b20,#afc2fa,#f9728f,#939af8,#fbb181,#4484f6,#f7b832,#5fa9f8,#f97a58,#876ef6,#fbada4,#2494c7,#c5a028,#3ed9fa,#9c8a20,#2eb4df,#e68c28,#259aa8,#cfcb32,#39dfd5,#9fb029,#e428b2,#80e233,#fba7cd,#2ec53c,#f956e5,#3ae4a3,#f3a1fa,#259e8b,#cab8fa,#2fbe9a,#c436f6,#25a25c,#bf85f8,#f52a51,#90cbfa,#739821,#fba9c1";
   --unknown: #5c5c60;
 
   --sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -102,7 +115,7 @@
     --err-ink:    #a02121;
     --zero:       #d8cec4;
     --tt-bg:      #fffdfb;
-    --palette: "#b6322e,#3c41ae,#6a6f07,#871c74,#786907,#0f8fa7,#805304,#119a91,#965806,#7d2385,#0e9247,#0c7db3,#960d4c,#9e7b0c,#1090a0,#813c03,#086bb7,#9a0b35,#2f62c9,#0e9066,#8944ae,#256203,#097399,#8e2d02,#6752c3,#0b8168,#794bbb,#6b8f0c,#ab3378";
+    --palette: "#602708,#135e60,#503408,#4056f4,#96153f,#451dd4,#a55717,#063381,#8d6718,#105493,#8f2c0f,#3e1192,#ca2022,#0a4058,#64500f,#1c7b8f,#433b08,#125b72,#76450f,#0a4249,#757318,#1c7f79,#4f590f,#660c4e,#468019,#bf1f7d,#12641a,#88157c,#1c825b,#ab20b8,#0a443c,#8625f3,#13604d,#580d71,#0a4625,#7018aa,#6e0c1f,#1b75ae,#304208,#c21f6a";
     --unknown: #8a8a83;
   }
 }
@@ -137,7 +150,7 @@
   --err-ink:    #a02121;
   --zero:       #d8cec4;
   --tt-bg:      #fffdfb;
-  --palette: "#b6322e,#3c41ae,#6a6f07,#871c74,#786907,#0f8fa7,#805304,#119a91,#965806,#7d2385,#0e9247,#0c7db3,#960d4c,#9e7b0c,#1090a0,#813c03,#086bb7,#9a0b35,#2f62c9,#0e9066,#8944ae,#256203,#097399,#8e2d02,#6752c3,#0b8168,#794bbb,#6b8f0c,#ab3378";
+  --palette: "#602708,#135e60,#503408,#4056f4,#96153f,#451dd4,#a55717,#063381,#8d6718,#105493,#8f2c0f,#3e1192,#ca2022,#0a4058,#64500f,#1c7b8f,#433b08,#125b72,#76450f,#0a4249,#757318,#1c7f79,#4f590f,#660c4e,#468019,#bf1f7d,#12641a,#88157c,#1c825b,#ab20b8,#0a443c,#8625f3,#13604d,#580d71,#0a4625,#7018aa,#6e0c1f,#1b75ae,#304208,#c21f6a";
   --unknown: #8a8a83;
 }
 

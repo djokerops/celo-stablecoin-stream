@@ -59,7 +59,11 @@ function palette() {
 const SYMBOL_ORDER = [
   "USDT","USDC","USDm","BRLA","USDGLO","cNGN","GHSm","COPm","EURm","KESm",
   "XOFm","BRLm","PHPm","wBRL","wARS","NGNm","GBPm","JPYm","ZARm","AUDm",
-  "CADm","CHFm","VCHF","VGBP","USDM","wMXN","wCOP","wPEN","wCLP"
+  "CADm","CHFm","VCHF","VGBP","USDM","wMXN","wCOP","wPEN","wCLP",
+  /* Appended in arrival order: the list is ranked busiest-first so the leading,
+     best-separated slots go to the most-seen series, and these two are new. The
+     40-slot wheel leaves nine spare for the tokens after them. */
+  "USAT","IDRX"
 ];
 const SLOT = new Map(SYMBOL_ORDER.map((s, i) => [s, i]));
 /* An unknown symbol gets neutral grey, never a generated or recycled hue —
@@ -101,28 +105,25 @@ const TX_UNLABELED = "Unlabeled";
 const TX_LABEL = new Map(TX_TYPES);
 const TX_SLOT  = new Map(TX_TYPES.map(([, label], i) => [label, i]));
 
-/* Which run of the palette the types draw from. Symbols start at 0; these start
-   at 7, and the offset is measured, not taste.
+/* Which palette slots the transaction types draw from — an explicit set, not a
+   contiguous run. The palette guarantees a floor only for ADJACENT slots, but
+   the share pie ranks by value, so ANY two of these nine can end up touching:
+   all 36 pairs have to hold, not just the eight consecutive ones.
 
-   The palette guarantees a floor only for ADJACENT slots, but a pie ranks by
-   value, so ANY two types can end up touching — all 36 pairs have to hold up,
-   not just the nine consecutive ones. Scoring every 9-slot window on its worst
-   pair in the worse theme, under CIEDE2000 (CIE76 is unusable here: it rates
-   blues as far apart when they aren't, and picks a window of near-identical
-   blues):
-
-     slots  0-8   ΔE00  5.8   ← DEX Swap vs CEX Rebalance, both olive
-     slots 14-22  ΔE00  6.6
-     slots  7-15  ΔE00 10.4   ← chosen
-
-   Consecutive on purpose: the stack is pinned to slot order, so its on-screen
-   neighbours stay the pairs the palette validated. Rescore this if TX_TYPES
-   ever grows past nine. */
-const TX_SLOT_OFFSET = 7;
+   On a 40-hue wheel a contiguous window is the wrong shape for that — the
+   ordering optimises neighbours, which leaves slots two or three apart free to
+   collide. The best consecutive 9-window scores ΔE00 2.3 all-pairs; this set,
+   chosen for all-pairs separation directly, scores 8.8 (worst case across
+   normal, protan, deutan and tritan, in both themes) and a 4000-restart search
+   found nothing better — 8.8 is the ceiling for nine slots off a 40-hue wheel,
+   down from the 10.4 the old 29-slot wheel allowed. That is the one place the
+   wider palette costs something. Recompute this set if TX_TYPES changes length
+   or the palette is regenerated. */
+const TX_SLOTS = [0, 3, 5, 11, 20, 25, 28, 30, 32];
 
 const txLabel = (key) => TX_LABEL.get(key) || (key || TX_UNLABELED);
 const txColor = (label) =>
-  TX_SLOT.has(label) ? palette()[TX_SLOT.get(label) + TX_SLOT_OFFSET] : cssVar("--unknown");
+  TX_SLOT.has(label) ? palette()[TX_SLOTS[TX_SLOT.get(label)]] : cssVar("--unknown");
 const txRank  = (label) => TX_SLOT.has(label) ? TX_SLOT.get(label) : 999;
 
 /* ═══ formatting ═══════════════════════════════════════════════════════════ */
