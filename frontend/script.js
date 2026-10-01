@@ -61,13 +61,13 @@ const SYMBOL_ORDER = [
   "XOFm","BRLm","PHPm","wBRL","wARS","NGNm","GBPm","JPYm","ZARm","AUDm",
   "CADm","CHFm","VCHF","VGBP","USDM","wMXN","wCOP","wPEN","wCLP",
   /* Appended in arrival order: the list is ranked busiest-first so the leading,
-     best-separated slots go to the most-seen series, and these two are new. The
-     40-slot wheel leaves nine spare for the tokens after them. */
-  "USAT","IDRX"
+     best-separated slots go to the most-seen series, and these are new. The
+     40-slot wheel leaves seven spare for the tokens after them. */
+  "USAT","IDRX","EURA","COPM"
 ];
 const SLOT = new Map(SYMBOL_ORDER.map((s, i) => [s, i]));
 /* An unknown symbol gets neutral grey, never a generated or recycled hue —
-   a 30th colour would be indistinguishable from one already in play. */
+   a hue outside the validated wheel would collide with one already in play. */
 const colorFor = (sym) => SLOT.has(sym) ? palette()[SLOT.get(sym)] : cssVar("--unknown");
 const rankOf   = (sym) => SLOT.has(sym) ? SLOT.get(sym) : 999;
 

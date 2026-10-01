@@ -58,6 +58,8 @@ TOKENS = {
     "wCLP":   ("0x61D450a098b6a7f69fC4b98CE68198fe59768651", 18, "CLP"),
     "USAT":   ("0xD2ab3C9A02DBBAB236BfEC45D1d755DF4267F771", 6, "USD"),
     "IDRX":   ("0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22", 2, "IDR"),
+    "EURA":   ("0xC16B81Af351BA9e64C1a069E3Ab18c244A1E3049", 18, "EUR"),
+    "COPM":   ("0xc92e8fc2947e32f2b574cca9f2f12097a71d5606", 18, "COP"),
 }
 
 # COPY of HARDCODED_USD in the producer - backstop if live FX lacks a currency.

@@ -14,11 +14,11 @@ Celo (forno RPC) --> producer (Python) --> Redpanda --> ClickHouse --> queries
 2. **Redpanda** is the Kafka-compatible buffer, so the chain reader and the database don't have to keep pace with each other.
 3. **ClickHouse** consumes the topic through a Kafka engine table, and a materialized view writes each row into a `MergeTree` table partitioned by day.
 
-Tracked tokens (29):
+Tracked tokens (33):
 
 - **Mento** — `USDm`, `EURm`, `BRLm`, `AUDm`, `CADm`, `CHFm`, `COPm`, `GBPm`, `GHSm`, `JPYm`, `KESm`, `NGNm`, `PHPm`, `XOFm`, `ZARm`
 - **Ripio** — `wARS`, `wBRL`, `wMXN`, `wCOP`, `wPEN`, `wCLP`
-- **Other issuers** — `USDC`, `USDT`, `USAT`, `BRLA`, `VCHF`, `VGBP`, `USDGLO`, `USDM`, `cNGN`
+- **Other issuers** — `USDC`, `USDT`, `USAT`, `BRLA`, `VCHF`, `VGBP`, `USDGLO`, `USDM`, `cNGN`, `IDRX`, `EURA` (Angle, formerly agEUR), `COPM` (Minteo)
 
 **USD pricing.** USD-pegged tokens are 1.0. Everything else reads `medianRate` from Mento's `SortedOracles`, but only accepts it within 0.5x–2x of a reference peg — Mento feeds vary in scale and direction, so a raw `num/den` isn't always a clean USD price. Out-of-band reads fall back to the hardcoded reference rate. Treat `amount_usd` as indicative, not settlement-grade.
 
