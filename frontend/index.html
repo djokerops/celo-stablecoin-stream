@@ -202,6 +202,28 @@
     <div class="tableview" id="t-voltype"></div>
   </div>
 
+  <!-- ══ supply ══
+       A chain read (/api/supply), not a windowed ClickHouse metric — so a
+       "live" note where the other breakdowns carry a 1H/24H toggle. Same pair
+       as the volume panels above: who holds the supply, then how it splits. -->
+  <div class="panel" id="p-supsym">
+    <div class="phead">
+      <h2>Supply by Stablecoin</h2>
+      <span class="note">live</span>
+    </div>
+    <div class="chart" id="c-supsym" role="img"
+         aria-label="USD value of each stablecoin's total supply on Celo, ranked; the rest grouped as Others."></div>
+  </div>
+
+  <div class="panel" id="p-suppeg">
+    <div class="phead">
+      <h2>Supply by Peg: USD vs Local</h2>
+      <span class="note">live</span>
+    </div>
+    <div class="chart" id="c-suppeg" role="img"
+         aria-label="Share of total stablecoin supply, in USD, held in USD-pegged versus local-currency stablecoins."></div>
+  </div>
+
   <div class="panel full" id="p-recv">
     <div class="phead">
       <h2>Top Payment Receivers</h2>

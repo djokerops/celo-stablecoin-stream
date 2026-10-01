@@ -461,18 +461,23 @@ function renderVolSym() {
   renderPivotTable(document.getElementById("t-volsym"), piv, fmtUsd, "Minute");
 }
 
-/* 24h volume by stablecoin — ranked horizontal bars, each in its own fixed hue */
-function renderBySymbol() {
-  if (!CACHE.bysymbol) return;
+/* ═══ ranked bars (volume or supply, by stablecoin) ═════════════════════════
+   rows: [{ name, value, color, note? }] already in display order, BOTTOM-UP
+   (ECharts' category y-axis runs upward). note, when present, is a second
+   tooltip line — "Others" uses it to say what it is made of. */
+function rankedBarOption(rows) {
   const t = theme(), narrow = isNarrow();
-  const rows = CACHE.bysymbol.slice().sort((a, b) => a.usd_volume - b.usd_volume); // y-axis runs bottom-up
-  chartAt("c-symbol").setOption({
+  const notes = new Map(rows.filter(r => r.note).map(r => [r.name, r.note]));
+  return {
     animation: !REDUCED,
     grid: { left: 4, right: narrow ? 44 : 56, top: 8, bottom: 2, containLabel: true },
     tooltip: {
       ...tooltipBase(t), trigger: "item",
-      formatter: (p) => `${swatch(colorFor(p.name))}<span style="color:${t.ink2}">${p.name}</span>
-        <span style="color:${t.ink};margin-left:14px">${fmtUsdFull(p.value)}</span>`,
+      formatter: (p) => `${swatch(p.color)}<span style="color:${t.ink2}">${p.name}</span>
+        <span style="color:${t.ink};margin-left:14px">${fmtUsdFull(p.value)}</span>` +
+        (notes.has(p.name)
+          ? `<div style="color:${t.ink3};margin-top:4px;max-width:260px;white-space:normal">${notes.get(p.name)}</div>`
+          : ""),
     },
     xAxis: {
       type: "value", axisLine: { show: false }, axisTick: { show: false },
@@ -481,20 +486,48 @@ function renderBySymbol() {
       splitLine: { lineStyle: { color: t.grid, type: "solid" } },
     },
     yAxis: {
-      type: "category", data: rows.map(r => r.symbol),
+      type: "category", data: rows.map(r => r.name),
       axisLine: { show: false }, axisTick: { show: false },
       axisLabel: { color: t.ink2, fontFamily: MONO, fontSize: narrow ? 10 : 11 },
       splitLine: { show: false },
     },
     series: [{
       type: "bar", barMaxWidth: 16,
-      data: rows.map(r => ({ value: r.usd_volume, itemStyle: { color: colorFor(r.symbol) } })),
+      data: rows.map(r => ({ value: r.value, itemStyle: { color: r.color } })),
       itemStyle: { borderRadius: [0, 4, 4, 0] },   // rounded data-end, square at baseline
       // one label per bar is the point of a ranked bar chart: it IS the value axis
       label: { show: true, position: "right", color: t.ink2, fontFamily: MONO,
                fontSize: narrow ? 9.5 : 10.5, formatter: (p) => fmtUsd(p.value) },
     }],
-  }, true);
+  };
+}
+
+/* Volume by stablecoin — ranked horizontal bars, each in its own fixed hue */
+function renderBySymbol() {
+  if (!CACHE.bysymbol) return;
+  const rows = CACHE.bysymbol.slice().sort((a, b) => a.usd_volume - b.usd_volume)
+    .map(r => ({ name: r.symbol, value: r.usd_volume, color: colorFor(r.symbol) }));
+  chartAt("c-symbol").setOption(rankedBarOption(rows), true);
+}
+
+/* Supply by stablecoin — the same bars, top 11 plus one "Others" bar, so the
+   bars sum exactly to the Total supply tile instead of silently dropping the
+   tail. Others always sits at the bottom whatever its size: it is a remainder,
+   not a rank. */
+const SUPPLY_TOP = 11;
+function renderSupplyBySymbol() {
+  if (!CACHE.supply) return;
+  const toks = CACHE.supply.tokens.filter(r => r.supply_usd != null)
+    .sort((a, b) => b.supply_usd - a.supply_usd);
+  const top = toks.slice(0, SUPPLY_TOP), rest = toks.slice(SUPPLY_TOP);
+  const rows = top.reverse()
+    .map(r => ({ name: r.symbol, value: r.supply_usd, color: colorFor(r.symbol) }));
+  if (rest.length) rows.unshift({
+    name: "Others", color: cssVar("--unknown"),
+    value: rest.reduce((acc, r) => acc + r.supply_usd, 0),
+    note: `${rest.length} coins: ${rest.map(r => r.symbol).join(", ")}`,
+  });
+  chartAt("c-supsym").setOption(rankedBarOption(rows), true);
 }
 
 /* ═══ share pie (volume split — peg currency, transaction type) ════════════
@@ -544,6 +577,20 @@ function renderByPeg() {
   chartAt("c-peg").setOption(sharePieOption(items, (_name, i) => pal[i % pal.length]), true);
 }
 
+/* Supply split: USD-pegged vs everything else. Fixed order, not ranked, so each
+   side keeps its slot colour (0, 1 — the same slots the peg pie leads with). */
+function renderSupplyByPeg() {
+  if (!CACHE.supply) return;
+  const pal = palette();
+  let usd = 0, local = 0;
+  for (const r of CACHE.supply.tokens) {
+    if (r.supply_usd == null) continue;
+    if (r.peg === "USD") usd += r.supply_usd; else local += r.supply_usd;
+  }
+  const items = [{ name: "USD-pegged", value: usd }, { name: "Local currency", value: local }];
+  chartAt("c-suppeg").setOption(sharePieOption(items, (_name, i) => pal[i]), true);
+}
+
 /* Volume per minute by transaction type — the shape of the mix over the hour. */
 function renderVolType() {
   const rows = CACHE.voltype; if (!rows) return;
@@ -584,10 +631,14 @@ async function loadSummary() {
    p-top busy state, which belongs to the range-driven summary. Plain text, so
    a theme flip needs no re-render. The hover title carries the exact figure. */
 async function loadSupply() {
-  const s = await getJSON("/api/supply");
+  busy("p-supsym", true); busy("p-suppeg", true);
+  const s = CACHE.supply = await getJSON("/api/supply");
   const el = document.getElementById("s-supply");
   el.textContent = fmtUsd(s.total_usd || 0);
   el.title = fmtUsdFull(s.total_usd || 0) + " across " + s.tokens.length + " stablecoins";
+  renderSupplyBySymbol();
+  renderSupplyByPeg();
+  busy("p-supsym", false); busy("p-suppeg", false);
 }
 
 /* Unique senders per minute. One global series: an address that sends several
@@ -658,7 +709,8 @@ async function loadReceivers() {
 
 const RENDERERS = [renderSummary, renderSenders, renderPayments, renderPaySym,
                    renderVolSym, renderBySymbol, renderByPeg, renderByTxType,
-                   renderVolType, renderReceivers];
+                   renderVolType, renderSupplyBySymbol, renderSupplyByPeg,
+                   renderReceivers];
 
 /* ═══ theme toggle ═════════════════════════════════════════════════════════ */
 const themeGroup = document.getElementById("theme-toggle");
@@ -725,7 +777,7 @@ document.querySelectorAll(".toggle.range").forEach(group => {
 });
 
 /* Re-render the width-sensitive charts only when the breakpoint is actually
-   crossed — resize fires continuously and these two do a full setOption. */
+   crossed — resize fires continuously and each of these does a full setOption. */
 let wasNarrow = isNarrow(), resizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
@@ -735,6 +787,8 @@ window.addEventListener("resize", () => {
     renderByPeg();
     renderByTxType();
     renderBySymbol();
+    renderSupplyBySymbol();
+    renderSupplyByPeg();
   }, 180);
 });
 
