@@ -77,6 +77,12 @@
     <div class="label micro">Active stablecoins <span class="rng">· 24h</span></div>
     <div class="value" id="s-coins">—</div>
   </div>
+  <!-- No .rng span: supply is a point-in-time chain read, not a windowed
+       metric, and renderSummary rewrites every .rng to the selected range. -->
+  <div class="tile">
+    <div class="label micro">Total supply <span class="spot">· live</span></div>
+    <div class="value" id="s-supply">—</div>
+  </div>
 </section>
 
 <section class="grid">

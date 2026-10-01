@@ -253,7 +253,7 @@ header .toggle { margin-left: auto; align-self: center; }
 
 /* ── KPI tiles ───────────────────────────────────────────────────────────── */
 .topline {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
   background: var(--hairline);
   border: 1px solid var(--hairline); border-radius: var(--r);
   overflow: hidden; margin-bottom: 24px;
@@ -262,12 +262,12 @@ header .toggle { margin-left: auto; align-self: center; }
 .topline.loading { opacity: .5; }
 .tile { background: var(--tile-bg); padding: 18px 20px 20px; }
 .tile .label { margin-bottom: 10px; }
-/* All four metrics share one size. clamp() keeps the longest value ("164,763")
-   inside its column at every width — a fixed 52px overflows the 1fr tracks
-   around the 1000-1100px range, where four columns are still in play.
+/* All five metrics share one size. clamp() keeps the longest value ("$524.82M")
+   inside its column at every width — the 1fr tracks are narrowest just above
+   1000px, where five columns are still in play.
    Proportional figures: tabular-nums makes large standalone numbers look loose. */
 .tile .value {
-  font-size: clamp(30px, 3.4vw, 52px);
+  font-size: clamp(26px, 2.7vw, 44px);
   font-weight: 600; letter-spacing: -.03em; line-height: 1.1;
 }
 .tile.hero .value { color: var(--hero-ink); }
@@ -429,6 +429,9 @@ tbody tr:hover td { background: var(--surface-hi); color: var(--ink); }
 @media (max-width: 1000px) {
   .grid { grid-template-columns: 1fr; }
   .topline { grid-template-columns: 1fr 1fr; }
+  /* Five tiles in two columns leaves the last one alone; let it span the row
+     instead of sitting beside an empty hairline cell. */
+  .topline .tile:last-child { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
   .wrap { padding: 22px 16px 52px; }

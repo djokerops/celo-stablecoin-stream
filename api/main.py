@@ -20,6 +20,8 @@ import clickhouse_connect
 from fastapi import FastAPI, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
+import supply
+
 # --- config from environment ---
 CH_HOST = os.environ.get("CLICKHOUSE_HOST", "clickhouse")   # service name in compose
 CH_PORT = int(os.environ.get("CLICKHOUSE_PORT", "8123"))    # HTTP port
@@ -121,6 +123,18 @@ def summary(hours: int = Query(24, ge=1, le=168)):
     res = c.query(q, parameters=base_params(hours=hours))
     data = rows_to_dicts(res)
     return data[0] if data else {}
+
+
+@app.get("/api/supply")
+def total_supply(response: Response):
+    """Total on-chain supply of every tracked stablecoin, in USD. Read from the
+    chain (totalSupply over forno), NOT from ClickHouse - see supply.py.
+    Cached 5 min; serves the last good value through an RPC blip."""
+    try:
+        return supply.get_supply()
+    except Exception as e:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"error": f"supply unavailable: {e}"}
 
 
 @app.get("/api/volume-by-symbol")

@@ -579,6 +579,17 @@ async function loadSummary() {
   busy("p-top", false);
 }
 
+/* Total supply in USD. Read from the chain by the API (cached there for 5 min),
+   not from ClickHouse, and not tied to the 1H/24H range — so it skips the
+   p-top busy state, which belongs to the range-driven summary. Plain text, so
+   a theme flip needs no re-render. The hover title carries the exact figure. */
+async function loadSupply() {
+  const s = await getJSON("/api/supply");
+  const el = document.getElementById("s-supply");
+  el.textContent = fmtUsd(s.total_usd || 0);
+  el.title = fmtUsdFull(s.total_usd || 0) + " across " + s.tokens.length + " stablecoins";
+}
+
 /* Unique senders per minute. One global series: an address that sends several
    different stablecoins in a minute is ONE sender, deduplicated server-side by
    uniqExact. Not segmented, so no legend — the title says what is plotted. */
@@ -730,7 +741,7 @@ window.addEventListener("resize", () => {
 /* ═══ refresh loop ═════════════════════════════════════════════════════════ */
 
 async function refreshAll() {
-  const jobs = [loadSummary, loadSenders, loadPayments, loadPaySym,
+  const jobs = [loadSummary, loadSupply, loadSenders, loadPayments, loadPaySym,
                 loadVolSym, loadBySymbol, loadByPeg, loadByTxType,
                 loadVolType, loadReceivers];
   const results = await Promise.allSettled(jobs.map(fn => fn()));
